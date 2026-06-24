@@ -19,7 +19,10 @@ function getLang(): 'zh-TW' | 'en' {
   return localStorage.getItem('ssc-lang') === 'en' ? 'en' : 'zh-TW';
 }
 function esc(s: string): string {
-  return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
+function safeUrl(u: string): string {
+  return /^https?:\/\//i.test(u) ? u : '#';
 }
 function dealCard(d: Deal, t: Dict): string {
   const diff = d.observedLowCents != null ? d.priceCents - d.observedLowCents : null;
@@ -51,7 +54,7 @@ function freeCard(f: FreeGiveaway, t: Dict): string {
     <div class="card-body">
       <p class="card-title">${esc(f.title)}</p>
       <div class="row"><span class="badge badge-disc">${t.perpetual}</span>${plats}</div>
-      <div class="row">${end}<a class="claim-btn" href="${esc(f.url)}" target="_blank" rel="noopener">${t.claim} ↗</a></div>
+      <div class="row">${end}<a class="claim-btn" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener">${t.claim} ↗</a></div>
     </div>
   </article>`;
 }
