@@ -1,0 +1,17 @@
+{
+  "title": "Steam 特價追蹤",
+  "subtitle": "熱銷特價 · 本站自建價格追蹤",
+  "deals": "熱門特價榜",
+  "endingSoon": "即將結束",
+  "free": "免費領取",
+  "atLow": "本站最低",
+  "fromLow": "離本站最低差 NT$ {n}",
+  "trackingSince": "追蹤自 {date}",
+  "updatedAgo": "更新於 {n} 分鐘前",
+  "stale": "(資料較舊)",
+  "claim": "前往領取",
+  "perpetual": "永久入庫",
+  "noEnd": "無期限",
+  "langName": "EN",
+  "footerText": "價格資料來自 Steam 商店;免費領取資料"
+}

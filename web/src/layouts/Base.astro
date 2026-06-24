@@ -1,0 +1,53 @@
+---
+---
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Steam 特價追蹤 — 熱銷特價與免費領取,本站自建價格歷史" />
+  <title>Steam 特價追蹤</title>
+  <style is:global>
+    :root{
+      --bg:#0e1622; --surface:#16202d; --line:#2a3f5a; --text:#c7d5e0; --muted:#6d7e8f;
+      --accent:#66c0f4; --price:#beee11; --disc-bg:#4c6b22; --disc-fg:#d2e885;
+      --low-bg:#4a3416; --low-fg:#f0b95a; --radius:10px; --maxw:1120px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);
+      font-family:system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.6}
+    .wrap{max-width:var(--maxw);margin:0 auto;padding:24px 16px 8px}
+    h1{font-size:24px;font-weight:600;color:#fff;margin:0 0 2px}
+    h2{font-size:18px;font-weight:600;color:#fff;margin:28px 0 12px;border-left:3px solid var(--accent);padding-left:10px}
+    a{color:var(--accent);text-decoration:none}
+    .muted{color:var(--muted)} .small{font-size:12px} p{margin:0}
+    .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .lang-btn{background:var(--surface);color:var(--text);border:1px solid var(--line);
+      border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
+    .lang-btn:hover{border-color:var(--accent)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+    .thumb{width:100%;display:block;aspect-ratio:460/215;object-fit:cover;background:#0e1622}
+    .card-body{padding:12px 14px}
+    .card-title{color:#fff;font-weight:500;margin:0 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .row:last-child{margin-bottom:0;min-height:20px}
+    .badge{font-size:12px;font-weight:500;padding:2px 8px;border-radius:6px;line-height:1.4}
+    .badge-disc{background:var(--disc-bg);color:var(--disc-fg)}
+    .badge-low{background:var(--low-bg);color:var(--low-fg)}
+    .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:2px 8px;border-radius:6px}
+    .price{color:var(--price);font-size:17px;font-weight:500}
+    .was{color:var(--muted);text-decoration:line-through;font-size:13px}
+    .claim-btn{margin-left:auto;font-size:13px}
+    .site-footer{max-width:var(--maxw);margin:24px auto 0;padding:14px 16px 28px;
+      border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="wrap"><slot /></main>
+  <footer class="site-footer">
+    <span id="footer-text">價格資料來自 Steam 商店;免費領取資料</span>
+    Powered by <a href="https://www.gamerpower.com/" target="_blank" rel="noopener">GamerPower.com</a>。
+    <span>本站與 Valve 無任何關係。</span>
+  </footer>
+</body>
+</html>

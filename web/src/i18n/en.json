@@ -1,0 +1,17 @@
+{
+  "title": "Steam Deal Tracker",
+  "subtitle": "Top-seller deals · self-tracked price history",
+  "deals": "Top deals",
+  "endingSoon": "Ending soon",
+  "free": "Free to keep",
+  "atLow": "Lowest here",
+  "fromLow": "NT$ {n} above our low",
+  "trackingSince": "Tracking since {date}",
+  "updatedAgo": "Updated {n} min ago",
+  "stale": "(stale data)",
+  "claim": "Claim",
+  "perpetual": "Keep forever",
+  "noEnd": "No deadline",
+  "langName": "中",
+  "footerText": "Prices from the Steam store; free-games data"
+}
