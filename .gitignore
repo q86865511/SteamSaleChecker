@@ -6,3 +6,4 @@ web/.astro/
 web/src/env.d.ts
 .env
 *.log
+.claude/
