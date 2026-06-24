@@ -28,3 +28,28 @@ export async function enrichMany(appids: number[]): Promise<Map<number, ParsedAp
   }
   return out;
 }
+
+export async function fetchTopSellerSpecialAppids(limit = 120): Promise<number[]> {
+  const seen = new Set<number>();
+  const ordered: number[] = [];
+  for (let start = 0; start < limit && start < 1000; start += 50) {
+    const url = `https://store.steampowered.com/search/results/?specials=1&filter=topsellers&cc=tw&l=tchinese&infinite=1&start=${start}&count=50`;
+    let html: string;
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': UA } });
+      if (!res.ok) break;
+      const j = await res.json();
+      html = j?.results_html ?? '';
+    } catch { break; }
+    if (!html) break;
+    const matches = [...html.matchAll(/data-ds-appid="(\d+)"/g)];
+    if (matches.length === 0) break;
+    for (const m of matches) {
+      const id = Number(m[1].split(',')[0]); // bundles may list multiple; take first
+      if (!seen.has(id)) { seen.add(id); ordered.push(id); }
+      if (ordered.length >= limit) break;
+    }
+    await sleep(1100);
+  }
+  return ordered.slice(0, limit);
+}
