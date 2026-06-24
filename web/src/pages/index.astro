@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base>
+  <header class="head">
+    <div>
+      <h1 data-i18n="title">Steam 特價追蹤</h1>
+      <p class="muted" data-i18n="subtitle">熱銷特價 · 本站自建價格追蹤</p>
+      <p class="muted small" id="meta"></p>
+    </div>
+    <button id="lang-toggle" class="lang-btn">EN</button>
+  </header>
+
+  <section id="ending-soon-sec" hidden>
+    <h2 data-i18n="endingSoon">即將結束</h2>
+    <div class="grid" id="ending-soon"></div>
+  </section>
+
+  <section>
+    <h2 data-i18n="deals">熱門特價榜</h2>
+    <div class="grid" id="deals"></div>
+  </section>
+
+  <section>
+    <h2 data-i18n="free">免費領取</h2>
+    <div class="grid" id="free"></div>
+  </section>
+
+  <script>
+    import { boot } from '../scripts/app';
+    boot();
+  </script>
+</Base>
