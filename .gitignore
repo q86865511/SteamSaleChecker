@@ -2,5 +2,7 @@ node_modules/
 dist/
 data/
 web/dist/
+web/.astro/
+web/src/env.d.ts
 .env
 *.log
