@@ -10,9 +10,10 @@ import type { Meta } from '@ssc/shared';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 loadEnv({ path: join(REPO_ROOT, 'api', '.env') });
-const DATA_DIR = process.env.SSC_DATA_DIR ?? join(REPO_ROOT, 'web', 'public', 'data');
-const DB_PATH = process.env.SSC_DB ?? join(REPO_ROOT, 'data', 'steam.db');
-const DEAL_LIMIT = Number(process.env.SSC_DEAL_LIMIT ?? '120');
+const envOr = (v: string | undefined, fallback: string): string => (v && v.length > 0 ? v : fallback);
+const DATA_DIR = envOr(process.env.SSC_DATA_DIR, join(REPO_ROOT, 'web', 'public', 'data'));
+const DB_PATH = envOr(process.env.SSC_DB, join(REPO_ROOT, 'data', 'steam.db'));
+const DEAL_LIMIT = Number(envOr(process.env.SSC_DEAL_LIMIT, '120')) || 120;
 
 const main = async () => {
   const now = Math.floor(Date.now() / 1000);
