@@ -1,0 +1,23 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base>
+  <header class="head">
+    <div>
+      <h1 data-i18n="favTitle">我的收藏</h1>
+      <p class="muted small"><a href="/" data-i18n="backToDeals">← 返回特價</a></p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="auth-control"></span>
+      <button id="theme-toggle" class="lang-btn" type="button" aria-label="切換主題">🌙</button>
+      <button id="lang-toggle" class="lang-btn">EN</button>
+    </div>
+  </header>
+
+  <section><div id="fav-list"></div></section>
+
+  <script>
+    import { bootFavorites } from '../scripts/favorites';
+    bootFavorites();
+  </script>
+</Base>

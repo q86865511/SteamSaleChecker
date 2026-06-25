@@ -143,6 +143,21 @@ export function markReviewChecked(db: DB, appid: number, now: number): void {
   db.prepare('INSERT INTO game_reviews(appid, reviewed_at) VALUES(?, ?) ON CONFLICT(appid) DO UPDATE SET reviewed_at=?')
     .run(appid, now, now);
 }
+
+// --- games 索引(收藏頁:讓收藏的遊戲即使目前沒特價也有名稱/封面/史低)---
+export function upsertGame(db: DB, appid: number, nameZh: string, headerImage: string, regularCents: number, isFree: boolean, now: number): void {
+  db.prepare(`INSERT INTO games(appid,name_zh,header_image,regular_price_cents,is_free,first_seen,last_seen)
+    VALUES(@a,@n,@h,@r,@f,@now,@now)
+    ON CONFLICT(appid) DO UPDATE SET name_zh=@n, header_image=@h, regular_price_cents=@r, is_free=@f, last_seen=@now`)
+    .run({ a: appid, n: nameZh, h: headerImage, r: regularCents, f: isFree ? 1 : 0, now });
+}
+export interface GameIndexEntry { appid: number; nameZh: string; headerImage: string; observedLowCents: number | null; observedLowAt: number | null; }
+export function gamesIndex(db: DB): GameIndexEntry[] {
+  return db.prepare(`SELECT g.appid AS appid, g.name_zh AS nameZh, g.header_image AS headerImage,
+      s.observed_low_cents AS observedLowCents, s.observed_low_at AS observedLowAt
+    FROM games g LEFT JOIN game_stats s ON s.appid = g.appid
+    ORDER BY g.last_seen DESC`).all() as GameIndexEntry[];
+}
 export function upsertReview(db: DB, appid: number, rev: ReviewSummary, now: number): void {
   db.prepare(`INSERT INTO game_reviews(appid,score_desc,positive_pct,total,reviewed_at)
     VALUES(@a,@d,@p,@t,@now)

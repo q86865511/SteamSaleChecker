@@ -4,7 +4,11 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
-- **2026-06-25:Phase B-2 商品詳細頁(`feat/game-detail`,待 PR 審查)**
+- **2026-06-25:Phase B-3 全收藏頁(`feat/favorites`,待 PR 審查)**
+  - worker:enrich 時把遊戲名/封面/原價持久化進 `games` 表(原本閒置)+ 烤 `games-index.json`(LEFT JOIN game_stats 帶史低);收藏的遊戲即使目前沒特價也能顯示。TDD `upsertGame`/`gamesIndex`。
+  - 新 `/favorites` 頁:登入感知載入收藏 → 比對 deals(現價/折扣)+ games-index(名/圖/史低)渲染卡片、★ 即時移除、連到 `/game`;header 加 ♥ 連結。
+  - **104 測試**綠、build 4 頁、worker/web tsc 乾淨、i18n 同步(68 keys)。
+- **2026-06-25:Phase B-2 商品詳細頁(`feat/game-detail`,PR #12 已 merge、部署 live)**
   - worker:`appdetails` filter 擴充(短介紹/類型/上市日/截圖;`parseAppDetails` TDD)→ 烤 `detail/{appid}.json`(deal 價格/史低/評價 + 豐富欄位),**不增加 Steam 請求數**(沿用既有 enrich)。
   - 新 `web/src/pages/game.astro` + `game.ts`:`/game?appid=` client fetch detail + history,顯示封面/價格/折扣/即時倒數/評價/史低/Steam 連結/價格走勢圖(主題感知)/介紹/類型/上市日/截圖。
   - **取代圖表 modal**:列表/卡片點擊改導向 `/game`;遊戲名稱改 `<a>` 連結(**修好鍵盤可達性**);移除 index modal。
@@ -88,8 +92,9 @@
 - ~~Phase C 通知包~~:✅ PR #10 已 merge(目標價通知移至 Phase B)。
 - **Phase B 資料加值 + 詳細頁(進行中,拆小 PR)**:
   - ✅ B-1 遊戲評價(PR #11 已 merge)。
-  - ✅ B-2 商品詳細頁 `/game`(取代圖表 modal、修鍵盤可達性,`feat/game-detail` 待 PR)。
-  - ⬜ B-3 全收藏頁;B-4 sparkline + 類型篩選;B-5 目標價通知(自 C 移入)。
+  - ✅ B-2 商品詳細頁 `/game`(PR #12 已 merge)。
+  - ✅ B-3 全收藏頁(`feat/favorites` 待 PR)。
+  - ⬜ B-4 sparkline + 類型篩選;B-5 目標價通知(自 C 移入)。
   - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
 - **Phase D**:Steam 願望單匯入。
 

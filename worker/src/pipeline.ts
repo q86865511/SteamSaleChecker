@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import type { DB } from './db';
-import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked } from './db';
+import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked, upsertGame, gamesIndex } from './db';
 import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids, fetchReviewSummary } from './sources/steam';
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
@@ -26,6 +26,10 @@ export async function runPipeline(
 
   // 2. 補資料(台幣現價/原價/折扣/封面/繁中名)
   const enriched = await enrichMany(discovery);
+  // 持久化遊戲基本資料(收藏頁需要:即使該遊戲目前沒特價也能顯示名稱/封面)
+  for (const [appid, a] of enriched) {
+    if (a.hasPrice || a.isFree) upsertGame(db, appid, a.nameZh, a.headerImage, a.regularCents, a.isFree, nowSec);
+  }
 
   // 3. 寫價格歷史 + 維護最低;組 Deal(只收實際在特價者)
   const deals: Deal[] = [];
@@ -100,5 +104,7 @@ export async function runPipeline(
     };
     writeJsonAtomic(join(detailDir, `${d.appid}.json`), detail);
   }
+  // 全遊戲輕量索引(收藏頁用)
+  writeJsonAtomic(join(dataDir, 'games-index.json'), gamesIndex(db));
   return { deals, free, meta, newLows };
 }
