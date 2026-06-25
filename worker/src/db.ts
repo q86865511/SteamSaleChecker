@@ -30,6 +30,12 @@ export function getStats(db: DB, appid: number): Stats | undefined {
     `SELECT observed_low_cents, observed_low_at, observed_max_discount, seeded_low_cents
      FROM game_stats WHERE appid = ?`).get(appid) as Stats | undefined;
 }
+export interface PricePoint { t: number; price: number; }
+export function getPriceHistory(db: DB, appid: number): PricePoint[] {
+  return db.prepare(
+    `SELECT observed_at AS t, price_cents AS price FROM price_history WHERE appid = ? ORDER BY observed_at ASC`,
+  ).all(appid) as PricePoint[];
+}
 export function recordPriceAndLow(
   db: DB, appid: number, observedAt: number, priceCents: number, discountPercent: number,
 ): void {

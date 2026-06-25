@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { openDb, recordPriceAndLow, getStats } from './db';
+import { openDb, recordPriceAndLow, getStats, getPriceHistory } from './db';
 describe('db', () => {
   it('建表並記錄價格、維護最低', () => {
     const db = openDb(':memory:');
@@ -10,5 +10,11 @@ describe('db', () => {
     expect(s?.observed_low_cents).toBe(250_00);
     expect(s?.observed_low_at).toBe(3000);
     expect(s?.observed_max_discount).toBe(83);
+  });
+  it('getPriceHistory 依時間回傳價格點', () => {
+    const db = openDb(':memory:');
+    recordPriceAndLow(db, 5, 1000, 500_00, 0);
+    recordPriceAndLow(db, 5, 2000, 400_00, 20);
+    expect(getPriceHistory(db, 5)).toEqual([{ t: 1000, price: 50000 }, { t: 2000, price: 40000 }]);
   });
 });
