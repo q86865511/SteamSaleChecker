@@ -5,6 +5,8 @@ import { config as loadEnv } from 'dotenv';
 import { openDb } from './db';
 import { runPipeline } from './pipeline';
 import { collectPending, dispatchNotifications } from './notify';
+import { syncAndNotifyGiveaways } from './giveaways';
+import { maybeSendDigest } from './digest';
 import { writeJsonAtomic } from './bake';
 import { shouldRefresh, lastSeededAt, seedItadLows } from './seed/itad';
 import type { Meta } from '@ssc/shared';
@@ -27,7 +29,7 @@ const main = async () => {
     try { trackingSince = (JSON.parse(readFileSync(metaPath, 'utf8')) as Meta).trackingSince ?? now; } catch {}
   }
   try {
-    const { meta, newLows } = await runPipeline(db, DATA_DIR, now, trackingSince, DEAL_LIMIT);
+    const { deals, free, meta, newLows } = await runPipeline(db, DATA_DIR, now, trackingSince, DEAL_LIMIT);
     console.log(`OK deals=${meta.dealCount} free=${meta.freeCount}`);
     const botToken = process.env.DISCORD_BOT_TOKEN;
     const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
@@ -35,6 +37,18 @@ const main = async () => {
       const pending = collectPending(db, newLows);
       const sent = await dispatchNotifications(db, pending, botToken, channelId, now);
       console.log(`通知:${sent}/${pending.length} 已送`);
+      // 免費領取通知 + 每日/每週摘要(失敗不影響主流程)
+      try {
+        const gsent = await syncAndNotifyGiveaways(db, free, botToken, channelId, now);
+        if (gsent) console.log(`免費領取通知:${gsent} 筆`);
+        const digestHours = Number(envOr(process.env.SSC_DIGEST_HOURS, '0'));
+        const digestSec = (Number.isFinite(digestHours) ? digestHours : 0) * 3600;
+        if (digestSec > 0 && await maybeSendDigest(db, deals, botToken, channelId, now, digestSec)) {
+          console.log('特價摘要:已送出');
+        }
+      } catch (e) {
+        console.warn('免費/摘要通知失敗(不影響主流程):', e instanceof Error ? e.message : e);
+      }
     } else {
       console.log('未設定 DISCORD_BOT_TOKEN/CHANNEL,略過通知');
     }

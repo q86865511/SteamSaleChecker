@@ -4,7 +4,12 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
-- **2026-06-25:Phase A 前端體驗包(`feat/frontend-pack`,待 PR 審查)**
+- **2026-06-25:Phase C 通知包(`feat/notify-pack`,待 PR 審查)**
+  - **免費領取 Discord 通知**:啟用閒置的 `free_giveaways` 表(遷移加 `first_seen`/`notified`/`notified_at`);首輪建立基線不通知,之後僅對新出現的 giveaway 發頻道公告(重用 `postChannelMessage`)。
+  - **每日/每週特價摘要**:新 `report_gates` 表 + 重用 `shouldRefresh` gating;`formatDigest` 取折扣 Top N;`SSC_DIGEST_HOURS`(0=停用、24=每日、168=每週)控制,**預設停用**(需手動開)。
+  - 純函式 `formatGiveawayMessage`/`formatDigest` 與 DB 狀態皆 TDD(**95 測試**綠);通知失敗不影響主流程。
+  - **目標價通知改排 Phase B**:其設定 UI 需依賴 Phase B 的收藏/詳細頁,與該頁一起做較合理。
+- **2026-06-25:Phase A 前端體驗包(`feat/frontend-pack`,PR #9 已 merge、部署 live)**
   - **icon/PWA/OG**:`web/public/favicon.svg`(降價長條品牌標)+ `manifest.webmanifest` + `Base.astro` head 加 favicon/manifest/theme-color/OG/twitter。
   - **設定頁** `web/src/pages/settings.astro` + `settings.ts`:主題(跟隨系統/深/淺)、語言、預設檢視集中;抽出共用 `theme.ts`/`i18n.ts` 供首頁與設定頁重用;header 加齒輪連結。
   - **即時特價倒數**:`view.ts` 純函式 `fmtCountdown`(TDD);列表加「倒數」欄、卡片顯示倒數,`setInterval` 每秒跳動、到期標「已結束」(僅 featured 來源有 expiration)。
@@ -70,9 +75,9 @@
 - (無)
 
 ## 待辦(功能擴充 roadmap,依序;見 `~/.claude/plans/1-icon-*.md`)
-- **Phase A 前端體驗包**:已完成,待 PR 審查 merge。
-- **Phase C 通知包**:免費領取 DC 通知 + 每日/每週特價報告 + 目標價通知。
-- **Phase B 資料加值 + 詳細頁**:評價 + 豐富 appdetails(介紹/截圖/類型)+ 商品詳細頁(取代圖表 modal)+ 全收藏頁 + sparkline + 類型篩選。
+- ~~Phase A 前端體驗包~~:✅ PR #9 已 merge。
+- **Phase C 通知包**:免費通知 + 每日/每週摘要已完成,待 PR 審查 merge(目標價通知移至 Phase B)。
+- **Phase B 資料加值 + 詳細頁**:評價 + 豐富 appdetails(介紹/截圖/類型)+ 商品詳細頁(取代圖表 modal、修鍵盤可達性)+ 全收藏頁 + sparkline + 類型篩選 + **目標價通知**(自 C 移入)。
 - **Phase D**:Steam 願望單匯入。
 
 ## 已知問題

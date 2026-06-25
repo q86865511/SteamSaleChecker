@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified } from './db';
+import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
+  giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent } from './db';
+import type { FreeGiveaway } from '@ssc/shared';
+
+const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
+  ({ id, source: 'gamerpower', title: 'G' + id, image: '', platforms: ['Steam'], endDate: null, url: 'u' + id, type: 'game', ...over });
 describe('db', () => {
   it('建表並記錄價格、維護最低', () => {
     const db = openDb(':memory:');
@@ -29,5 +34,42 @@ describe('db', () => {
     db.prepare("INSERT INTO users(id,discord_id,username) VALUES(1,'d1','A')").run();
     db.prepare('INSERT INTO wishlist(user_id,appid,added_at) VALUES(1,10,1000)').run();
     expect(getWishersForApp(db, 10)).toEqual([{ userId: 1, discordId: 'd1' }]);
+  });
+});
+
+describe('免費領取通知狀態', () => {
+  it('首輪 seed(seedNotified=true)記錄但不待通知', () => {
+    const db = openDb(':memory:');
+    recordGiveaway(db, gw('a'), 1000, true);
+    expect(giveawayCount(db)).toBe(1);
+    expect(pendingGiveaways(db)).toHaveLength(0);
+  });
+  it('之後新 giveaway 進待通知,markNotified 後消失', () => {
+    const db = openDb(':memory:');
+    recordGiveaway(db, gw('a'), 1000, true);   // baseline
+    recordGiveaway(db, gw('b', { worthUsd: '$5' }), 2000, false); // new
+    const pend = pendingGiveaways(db);
+    expect(pend.map(p => p.id)).toEqual(['b']);
+    expect(pend[0].worth_usd).toBe('$5');
+    markGiveawayNotified(db, 'b', 3000);
+    expect(pendingGiveaways(db)).toHaveLength(0);
+  });
+  it('重複 id 不重複(upsert 更新 last_seen、保留 notified)', () => {
+    const db = openDb(':memory:');
+    recordGiveaway(db, gw('a'), 1000, false);
+    recordGiveaway(db, gw('a'), 2000, false);
+    expect(giveawayCount(db)).toBe(1);
+    expect(pendingGiveaways(db)).toHaveLength(1);
+  });
+});
+
+describe('report_gates', () => {
+  it('未送過回 null;送過回最近時間(upsert)', () => {
+    const db = openDb(':memory:');
+    expect(lastReportSent(db, 'digest')).toBeNull();
+    recordReportSent(db, 'digest', 5000);
+    expect(lastReportSent(db, 'digest')).toBe(5000);
+    recordReportSent(db, 'digest', 9000);
+    expect(lastReportSent(db, 'digest')).toBe(9000);
   });
 });
