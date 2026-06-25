@@ -7,8 +7,9 @@ import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
 import { isAtLow } from '@ssc/shared';
 import type { Deal, FreeGiveaway, Meta } from '@ssc/shared';
+import type { NewLow } from './notify';
 
-export interface RunResult { deals: Deal[]; free: FreeGiveaway[]; meta: Meta; }
+export interface RunResult { deals: Deal[]; free: FreeGiveaway[]; meta: Meta; newLows: NewLow[]; }
 
 export async function runPipeline(
   db: DB, dataDir: string, nowSec: number, trackingSince: number, dealLimit = 120,
@@ -28,11 +29,16 @@ export async function runPipeline(
 
   // 3. 寫價格歷史 + 維護最低;組 Deal(只收實際在特價者)
   const deals: Deal[] = [];
+  const newLows: NewLow[] = [];
   for (const appid of discovery) {
     const a = enriched.get(appid);
     if (!a || !a.hasPrice || a.discountPercent <= 0) continue;
+    const prevLow = getStats(db, appid)?.observed_low_cents ?? null;
     recordPriceAndLow(db, appid, nowSec, a.priceCents, a.discountPercent);
     const st = getStats(db, appid);
+    if (prevLow != null && a.priceCents < prevLow) {
+      newLows.push({ appid, name: a.nameZh, lowCents: a.priceCents });
+    }
     deals.push({
       appid,
       nameZh: a.nameZh,
@@ -63,5 +69,5 @@ export async function runPipeline(
   for (const d of deals) {
     writeJsonAtomic(join(histDir, `${d.appid}.json`), getPriceHistory(db, d.appid));
   }
-  return { deals, free, meta };
+  return { deals, free, meta, newLows };
 }

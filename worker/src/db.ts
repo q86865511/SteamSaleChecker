@@ -18,6 +18,14 @@ export function openDb(path: string): DB {
     CREATE TABLE IF NOT EXISTS free_giveaways(
       id TEXT PRIMARY KEY, source TEXT, title TEXT, worth_usd TEXT, image TEXT,
       platforms TEXT, end_date TEXT, url TEXT, type TEXT, last_seen INTEGER);
+    CREATE TABLE IF NOT EXISTS users(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, discord_id TEXT UNIQUE,
+      username TEXT, avatar TEXT, created_at INTEGER, last_login INTEGER);
+    CREATE TABLE IF NOT EXISTS wishlist(
+      user_id INTEGER, appid INTEGER, added_at INTEGER, PRIMARY KEY(user_id, appid));
+    CREATE TABLE IF NOT EXISTS notifications(
+      user_id INTEGER, appid INTEGER, notified_low_cents INTEGER, notified_at INTEGER,
+      PRIMARY KEY(user_id, appid));
   `);
   return db;
 }
@@ -52,4 +60,22 @@ export function recordPriceAndLow(
     ON CONFLICT(appid) DO UPDATE SET
       observed_low_cents=@low, observed_low_at=@lowAt, observed_max_discount=@maxDisc
   `).run({ appid, low: lowCents, lowAt, maxDisc });
+}
+export interface Wisher { userId: number; discordId: string; }
+export function getWishersForApp(db: DB, appid: number): Wisher[] {
+  return db.prepare(
+    `SELECT w.user_id AS userId, u.discord_id AS discordId
+     FROM wishlist w JOIN users u ON u.id = w.user_id
+     WHERE w.appid = ? AND u.discord_id IS NOT NULL`).all(appid) as Wisher[];
+}
+export function alreadyNotified(db: DB, userId: number, appid: number, lowCents: number): boolean {
+  const row = db.prepare('SELECT notified_low_cents FROM notifications WHERE user_id = ? AND appid = ?')
+    .get(userId, appid) as { notified_low_cents: number } | undefined;
+  return !!row && row.notified_low_cents <= lowCents;
+}
+export function markNotified(db: DB, userId: number, appid: number, lowCents: number, at: number): void {
+  db.prepare(`INSERT INTO notifications(user_id, appid, notified_low_cents, notified_at)
+    VALUES(@u,@a,@low,@at)
+    ON CONFLICT(user_id, appid) DO UPDATE SET notified_low_cents=@low, notified_at=@at`)
+    .run({ u: userId, a: appid, low: lowCents, at });
 }

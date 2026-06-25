@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { randomBytes } from 'node:crypto';
 import type { DB } from './db';
 import { getUserById, upsertUser } from './db';
-import { buildAuthorizeUrl, exchangeCode, fetchMe } from './discord';
+import { addGuildMember, buildAuthorizeUrl, exchangeCode, fetchMe } from './discord';
 
 declare module '@fastify/secure-session' {
   interface SessionData {
@@ -44,6 +44,11 @@ export function registerAuth(app: FastifyInstance, db: DB): void {
     try {
       const token = await exchangeCode({ code, clientId: c.clientId, clientSecret: c.clientSecret, redirectUri: c.redirectUri });
       const me = await fetchMe(token);
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      const guildId = process.env.DISCORD_GUILD_ID;
+      if (botToken && guildId) {
+        try { await addGuildMember(botToken, guildId, me.id, token); } catch { /* 非致命:登入照常 */ }
+      }
       const userId = upsertUser(db, me);
       req.session.set('userId', userId);
       return reply.redirect(c.webOrigin);

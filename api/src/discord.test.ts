@@ -9,7 +9,7 @@ describe('buildAuthorizeUrl', () => {
     expect(q.get('response_type')).toBe('code');
     expect(q.get('client_id')).toBe('abc123');
     expect(q.get('redirect_uri')).toBe('http://localhost:8787/auth/callback');
-    expect(q.get('scope')).toBe('identify');
+    expect(q.get('scope')).toBe('identify guilds.join');
     expect(q.get('state')).toBe('xyz');
   });
 });
