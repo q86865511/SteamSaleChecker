@@ -4,6 +4,10 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-25:ITAD 史低每日刷新 + 正式站金鑰(`feat/itad-daily`)**
+  - 抽出共用模組 `worker/src/seed/itad.ts`(`shouldRefresh` 純函式 + `seedItadLows` 編排),CLI `itad-seed.ts` 改薄包裝;gate 5 測試 + 解析 12 測試綠。
+  - worker 每輪結束做 gated 每日刷新(`SSC_ITAD_REFRESH_HOURS` 預設 24h;有 `ITAD_API_KEY` 才跑;失敗不影響主流程;效果下一輪重烤反映)。
+  - 正式站金鑰:與 Discord 祕密一致,放主機 `api/.env`(gitignore,`git reset` 不覆蓋),worker 經 `env_file` 取得;有 key 即每日自動刷新,未設則略過。
 - **2026-06-25:後端小修(`feat/backend-fixes`)**
   - discord.js `ready` → `clientReady`(`api/src/presence.ts`):消棄用警告;lockfile 確認解析版本 14.26.4 已支援 `clientReady`。
   - ITAD seed 強化(TDD):抽出純函式 `parseStoreLows`(保留 currency + 史低 timestamp,優先用 `amountInt` 避免浮點誤差),12 測試綠;lookup/storelow 加重試退避;`--check` 乾跑;dotenv 讀 `api/.env`;幣別驗證(非 TWD 警示)。
@@ -53,15 +57,14 @@
 
 ## 待辦
 - **前端 SteamDB 風格改版(PR2)**:緊湊可排序列表 + 卡片/列表切換 + 亮色主題 + 單款搜尋(見計畫)。
-- **正式站 ITAD 史低 seed(可選)**:本機已驗證並 seed;正式站 DB 在主機 Docker volume,需於主機 `docker compose exec worker npm -w @ssc/worker run seed`(`api/.env` 含 `ITAD_API_KEY`)後等下一輪 worker 重烤。平時 runtime 不需 ITAD。
 
 ## 已知問題
-- 「史低」冷啟動:第一次觀測即視為最低。**本機已跑 ITAD seed**(2026-06-25),本機史低已為真實值並標真實日期;**正式站尚未 seed**,仍為冷啟動,待主機手動執行(見待辦)。文案誠實標「追蹤以來最低」。
+- 「史低」冷啟動:第一次觀測即視為最低。已接 **ITAD 每日刷新校正**(本機已驗證;**正式站於部署後 worker 首輪自動 seed**,之後每日刷新)。文案仍誠實標「追蹤以來最低」。
 - Steam 未公開端點有 per-IP 節流(~200 req/5min);`appdetails` 已節流 ~1 req/s + 退避。
 - `npm audit` 有數個 Astro/vitest 鏈的 dev 相依告警(非 production 暴露)。
 
 ## 重要決策紀錄
-- **史低自建、不在 production 依賴 ITAD**:Steam 官方無歷史價;改自記每次台幣價。ITAD 僅作上線前「一次性 seed」(可選)。
+- **史低自建 + ITAD 每日校正**(2026-06-25 修訂):Steam 官方無歷史價,主軸仍是自記每次台幣價;另以 ITAD **每日刷新**校正「史低參考值」(gated by `ITAD_API_KEY`,失敗不影響主流程,**不污染** `price_history` 走勢)。早期決策為「僅上線前一次性 seed」,因使用者需求改為常駐每日刷新。
 - **特價榜以熱銷為主、儘量完整**:用 Steam 特價搜尋 `infinite=1&filter=topsellers` 分頁取 appid(實測 `json=1` 無 appid,必須用 `infinite=1`),再 `appdetails` 補台幣價;`featuredcategories` 為 fallback。
 - **免費只做「永久入庫」**:免費周末/限免試玩無乾淨 API,不做;倒數=領取期限。
 - **架構**:公開瀏覽=靜態 JSON(快、穩);帳號/通知另起 API 服務 + bot(後續子系統)。
