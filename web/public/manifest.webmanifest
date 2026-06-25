@@ -1,0 +1,12 @@
+{
+  "name": "Steam 特價追蹤",
+  "short_name": "Steam特價",
+  "description": "Steam 熱銷特價與免費領取,本站自建價格歷史",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1622",
+  "theme_color": "#0e1622",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any maskable" }
+  ]
+}
