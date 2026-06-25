@@ -1,6 +1,7 @@
 import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import type { DB } from './db';
-import { recordPriceAndLow, getStats } from './db';
+import { recordPriceAndLow, getStats, getPriceHistory } from './db';
 import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids } from './sources/steam';
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
@@ -57,5 +58,10 @@ export async function runPipeline(
   writeJsonAtomic(join(dataDir, 'deals.json'), deals);
   writeJsonAtomic(join(dataDir, 'free.json'), free);
   writeJsonAtomic(join(dataDir, 'meta.json'), meta);
+  const histDir = join(dataDir, 'history');
+  mkdirSync(histDir, { recursive: true });
+  for (const d of deals) {
+    writeJsonAtomic(join(histDir, `${d.appid}.json`), getPriceHistory(db, d.appid));
+  }
   return { deals, free, meta };
 }
