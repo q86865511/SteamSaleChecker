@@ -14,6 +14,20 @@ describe('steam-parse', () => {
     expect(r.hasPrice).toBe(false);
     expect(r.priceCents).toBe(0);
   });
+  it('parseAppDetails:解析介紹/類型/上市日/截圖(取前 6)', () => {
+    const r = parseAppDetails({
+      name: 'X', is_free: false, header_image: 'h',
+      price_overview: { currency: 'TWD', initial: 1000, final: 500, discount_percent: 50 },
+      short_description: '好玩的遊戲',
+      genres: [{ description: '動作' }, { description: '冒險' }],
+      release_date: { coming_soon: false, date: '2024 年 1 月 1 日' },
+      screenshots: Array.from({ length: 8 }, (_, i) => ({ path_thumbnail: 's' + i })),
+    });
+    expect(r.shortDescription).toBe('好玩的遊戲');
+    expect(r.genres).toEqual(['動作', '冒險']);
+    expect(r.releaseDate).toBe('2024 年 1 月 1 日');
+    expect(r.screenshots).toEqual(['s0', 's1', 's2', 's3', 's4', 's5']);
+  });
   it('parseFeaturedItem:特價項目', () => {
     const r = parseFeaturedItem({
       id: 1091500, name: 'Cyberpunk 2077', discount_percent: 70,

@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base>
+  <header class="head">
+    <div><p class="small"><a href="/" data-i18n="backToDeals">← 返回特價</a></p></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button id="theme-toggle" class="lang-btn" type="button" aria-label="切換主題">🌙</button>
+      <button id="lang-toggle" class="lang-btn">EN</button>
+    </div>
+  </header>
+  <article id="game-detail" class="game-detail"></article>
+  <script>
+    import { bootGame } from '../scripts/game';
+    bootGame();
+  </script>
+</Base>

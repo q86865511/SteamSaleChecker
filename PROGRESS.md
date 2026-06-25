@@ -4,7 +4,12 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
-- **2026-06-25:Phase B-1 遊戲評價(`feat/game-reviews`,待 PR 審查)**
+- **2026-06-25:Phase B-2 商品詳細頁(`feat/game-detail`,待 PR 審查)**
+  - worker:`appdetails` filter 擴充(短介紹/類型/上市日/截圖;`parseAppDetails` TDD)→ 烤 `detail/{appid}.json`(deal 價格/史低/評價 + 豐富欄位),**不增加 Steam 請求數**(沿用既有 enrich)。
+  - 新 `web/src/pages/game.astro` + `game.ts`:`/game?appid=` client fetch detail + history,顯示封面/價格/折扣/即時倒數/評價/史低/Steam 連結/價格走勢圖(主題感知)/介紹/類型/上市日/截圖。
+  - **取代圖表 modal**:列表/卡片點擊改導向 `/game`;遊戲名稱改 `<a>` 連結(**修好鍵盤可達性**);移除 index modal。
+  - **103 測試**綠、build 3 頁、worker/web tsc 乾淨、i18n 同步(64 keys)。
+- **2026-06-25:Phase B-1 遊戲評價(`feat/game-reviews`,PR #11 已 merge)**
   - Steam `appreviews` 摘要抓取(`parseReviewSummary` 純函式 TDD)→ `game_reviews` 表(gated:每輪最多 30 款過期 >24h、節流 ~1/s)→ 烤進 `deals.json` 的 `review`{scoreDesc/positivePct/total};`l=tchinese` 取繁中評語。
   - 前端:列表加「評價」欄、卡片顯示 👍 正評%(依正評率著色),hover 顯示評語 + 總評數。
   - **100 測試**綠、worker/web tsc 乾淨、i18n 同步;Phase B 第一塊。
@@ -82,9 +87,10 @@
 - ~~Phase A 前端體驗包~~:✅ PR #9 已 merge。
 - ~~Phase C 通知包~~:✅ PR #10 已 merge(目標價通知移至 Phase B)。
 - **Phase B 資料加值 + 詳細頁(進行中,拆小 PR)**:
-  - ✅ B-1 遊戲評價(`feat/game-reviews`,待 PR)。
-  - ⬜ B-2 豐富 appdetails(介紹/截圖/類型/上市日)+ 商品詳細頁 `/game`(取代圖表 modal、修鍵盤可達性、OG per-game)。
+  - ✅ B-1 遊戲評價(PR #11 已 merge)。
+  - ✅ B-2 商品詳細頁 `/game`(取代圖表 modal、修鍵盤可達性,`feat/game-detail` 待 PR)。
   - ⬜ B-3 全收藏頁;B-4 sparkline + 類型篩選;B-5 目標價通知(自 C 移入)。
+  - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
 - **Phase D**:Steam 願望單匯入。
 
 ## 已知問題

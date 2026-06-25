@@ -13,7 +13,7 @@ export async function fetchFeatured(): Promise<{ specials: ParsedFeatured[]; top
   return { specials: map(j.specials?.items), topSellers: map(j.top_sellers?.items) };
 }
 export async function fetchAppDetails(appid: number, lang: 'tchinese' | 'english' = 'tchinese'): Promise<ParsedApp | null> {
-  const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=tw&l=${lang}&filters=basic,price_overview`;
+  const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=tw&l=${lang}&filters=basic,price_overview,genres,release_date,screenshots`;
   const j = await getJson(url);
   const entry = j[appid];
   if (!entry?.success || !entry.data) return null;
