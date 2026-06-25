@@ -2,7 +2,7 @@
   "name": "steamsalechecker",
   "private": true,
   "type": "module",
-  "workspaces": ["shared", "worker", "web"],
+  "workspaces": ["shared", "worker", "web", "api"],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"

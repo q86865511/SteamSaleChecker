@@ -1,5 +1,6 @@
 import { twd, minutesAgo } from './format';
 import { renderPriceChart } from './chart';
+import { getMe, loadWishlist, addWish, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
 import zhTW from '../i18n/zh-TW.json';
 import en from '../i18n/en.json';
 
@@ -25,7 +26,7 @@ function esc(s: string): string {
 function safeUrl(u: string): string {
   return /^https?:\/\//i.test(u) ? u : '#';
 }
-function dealCard(d: Deal, t: Dict): string {
+function dealCard(d: Deal, t: Dict, wished: boolean): string {
   const diff = d.observedLowCents != null ? d.priceCents - d.observedLowCents : null;
   const low = d.isAtObservedLow
     ? `<span class="badge badge-low">${t.atLow}</span>`
@@ -35,7 +36,10 @@ function dealCard(d: Deal, t: Dict): string {
   return `<article class="card clickable" data-appid="${d.appid}" data-title="${esc(d.nameZh)}" data-low="${d.observedLowCents ?? ''}">
     <img class="thumb" src="${esc(d.headerImage)}" alt="" loading="lazy" />
     <div class="card-body">
-      <p class="card-title">${esc(d.nameZh)}</p>
+      <div class="title-row">
+        <p class="card-title">${esc(d.nameZh)}</p>
+        <button class="wish-btn${wished ? ' on' : ''}" data-appid="${d.appid}" aria-label="${t.wishlist}" aria-pressed="${wished}">★</button>
+      </div>
       <div class="row">
         <span class="badge badge-disc">-${d.discountPercent}%</span>
         <span class="price">${twd(d.priceCents)}</span>
@@ -103,25 +107,50 @@ export async function boot(): Promise<void> {
       fetch('/data/meta.json').then(r => r.json()),
     ]);
   } catch (e) { console.error('load failed', e); }
+  const me: Me | null = await getMe();
+  const loggedIn = !!me;
+  if (loggedIn && getLocal().length) await mergeLocalOnLogin();
+  const wishSet = await loadWishlist(loggedIn);
+  const authEl = document.getElementById('auth-control');
+  if (authEl) {
+    if (me) {
+      authEl.innerHTML = `<span class="muted small" style="margin-right:8px">${esc(me.username)}</span><button id="logout-btn" class="lang-btn">${t.logout}</button>`;
+      document.getElementById('logout-btn')?.addEventListener('click', async () => { await logout(); location.reload(); });
+    } else {
+      authEl.innerHTML = `<a class="lang-btn" href="${discordLoginUrl()}">${t.login}</a>`;
+    }
+  }
   const now = Date.now();
   const dealsEl = document.getElementById('deals');
-  if (dealsEl) dealsEl.innerHTML = deals.map(d => dealCard(d, t)).join('');
+  if (dealsEl) dealsEl.innerHTML = deals.map(d => dealCard(d, t, wishSet.has(d.appid))).join('');
   const ending = deals.filter(d => d.discountExpiration
     && d.discountExpiration - now / 1000 < 48 * 3600 && d.discountExpiration - now / 1000 > 0);
   const endSec = document.getElementById('ending-soon-sec');
   const endEl = document.getElementById('ending-soon');
   if (ending.length && endEl && endSec) {
-    endEl.innerHTML = ending.map(d => dealCard(d, t)).join('');
+    endEl.innerHTML = ending.map(d => dealCard(d, t, wishSet.has(d.appid))).join('');
     endSec.hidden = false;
   }
   const freeEl = document.getElementById('free');
   if (freeEl) freeEl.innerHTML = free.map(f => freeCard(f, t)).join('');
-  const onCardClick = (e: Event) => {
-    const card = (e.target as HTMLElement).closest<HTMLElement>('.card.clickable');
+  const onCardClick = async (e: Event) => {
+    const target = e.target as HTMLElement;
+    const wishBtn = target.closest<HTMLButtonElement>('.wish-btn');
+    if (wishBtn) {
+      e.stopPropagation();
+      const appid = Number(wishBtn.dataset.appid);
+      const nowOn = !(wishBtn.getAttribute('aria-pressed') === 'true');
+      try {
+        if (nowOn) await addWish(appid, loggedIn); else await removeWish(appid, loggedIn);
+        wishBtn.classList.toggle('on', nowOn);
+        wishBtn.setAttribute('aria-pressed', String(nowOn));
+      } catch { /* ignore network error, keep UI */ }
+      return;
+    }
+    const card = target.closest<HTMLElement>('.card.clickable');
     if (!card) return;
-    const appid = Number(card.dataset.appid);
     const lowRaw = card.dataset.low;
-    openChart(appid, card.dataset.title ?? '', lowRaw ? Number(lowRaw) : null, t.chartEmpty);
+    openChart(Number(card.dataset.appid), card.dataset.title ?? '', lowRaw ? Number(lowRaw) : null, t.chartEmpty);
   };
   document.getElementById('deals')?.addEventListener('click', onCardClick);
   document.getElementById('ending-soon')?.addEventListener('click', onCardClick);
