@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
   giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
-  upsertReview, getReview, reviewedAt, markReviewChecked, upsertGame, gamesIndex } from './db';
+  upsertReview, getReview, reviewedAt, markReviewChecked, upsertGame, gamesIndex,
+  replaceGameGenres, getGenresForApp, allGenres } from './db';
 import type { FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
@@ -99,6 +100,28 @@ describe('game_reviews', () => {
     markReviewChecked(db, 21, 5000);
     expect(getReview(db, 21)?.positivePct).toBe(80);
     expect(reviewedAt(db, 21)).toBe(5000);
+  });
+});
+
+describe('game_genres(類型)', () => {
+  it('replaceGameGenres 寫入後 getGenresForApp 讀回', () => {
+    const db = openDb(':memory:');
+    replaceGameGenres(db, 10, ['動作', '角色扮演']);
+    expect(getGenresForApp(db, 10).slice().sort()).toEqual(['動作', '角色扮演'].sort());
+    expect(getGenresForApp(db, 99)).toEqual([]);
+  });
+  it('replace 覆寫(不殘留舊類型、不重複)', () => {
+    const db = openDb(':memory:');
+    replaceGameGenres(db, 10, ['動作', '策略']);
+    replaceGameGenres(db, 10, ['動作']);
+    expect(getGenresForApp(db, 10)).toEqual(['動作']);
+  });
+  it('allGenres 回全站去重類型', () => {
+    const db = openDb(':memory:');
+    replaceGameGenres(db, 1, ['動作', 'RPG']);
+    replaceGameGenres(db, 2, ['RPG', '策略']);
+    expect(new Set(allGenres(db))).toEqual(new Set(['動作', 'RPG', '策略']));
+    expect(allGenres(db).length).toBe(3);
   });
 });
 

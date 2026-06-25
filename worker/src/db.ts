@@ -30,6 +30,8 @@ export function openDb(path: string): DB {
       report_type TEXT PRIMARY KEY, last_sent_at INTEGER);
     CREATE TABLE IF NOT EXISTS game_reviews(
       appid INTEGER PRIMARY KEY, score_desc TEXT, positive_pct INTEGER, total INTEGER, reviewed_at INTEGER);
+    CREATE TABLE IF NOT EXISTS game_genres(
+      appid INTEGER, genre TEXT, PRIMARY KEY(appid, genre));
   `);
   // 遷移:早期 free_giveaways 無 first_seen/notified/notified_at(SQLite 無 ADD COLUMN IF NOT EXISTS)
   addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
@@ -157,6 +159,20 @@ export function gamesIndex(db: DB): GameIndexEntry[] {
       s.observed_low_cents AS observedLowCents, s.observed_low_at AS observedLowAt
     FROM games g LEFT JOIN game_stats s ON s.appid = g.appid
     ORDER BY g.last_seen DESC`).all() as GameIndexEntry[];
+}
+// --- 類型(Steam genres,中文)---
+// 全量取代某 app 的類型(DELETE→INSERT 交易);供類型篩選與通知類型偏好使用。
+export function replaceGameGenres(db: DB, appid: number, genres: string[]): void {
+  const del = db.prepare('DELETE FROM game_genres WHERE appid=?');
+  const ins = db.prepare('INSERT OR IGNORE INTO game_genres(appid,genre) VALUES(?,?)');
+  const tx = db.transaction((gs: string[]) => { del.run(appid); for (const g of gs) ins.run(appid, g); });
+  tx(genres);
+}
+export function getGenresForApp(db: DB, appid: number): string[] {
+  return (db.prepare('SELECT genre FROM game_genres WHERE appid=? ORDER BY genre').all(appid) as { genre: string }[]).map(r => r.genre);
+}
+export function allGenres(db: DB): string[] {
+  return (db.prepare('SELECT DISTINCT genre FROM game_genres ORDER BY genre').all() as { genre: string }[]).map(r => r.genre);
 }
 export function upsertReview(db: DB, appid: number, rev: ReviewSummary, now: number): void {
   db.prepare(`INSERT INTO game_reviews(appid,score_desc,positive_pct,total,reviewed_at)

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterDeals, sortDeals, applyView, resolveTheme, nextSortDir, fmtLowDate, readChartPalette,
-  fmtCountdown, applyFilters, NO_FILTERS,
+  fmtCountdown, applyFilters, buildSparklinePath, NO_FILTERS,
   type Deal, type ViewState, type DealFilters,
 } from './view';
 
@@ -121,5 +121,40 @@ describe('applyView 也套用 filters', () => {
   it('無 filters 欄位時不過濾(向後相容)', () => {
     const s = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: 'list' } as ViewState;
     expect(applyView(ds, s)).toHaveLength(2);
+  });
+});
+
+describe('applyFilters 類型(genre)', () => {
+  const ds = [
+    mk({ appid: 1, genres: ['動作', '角色扮演'] }),
+    mk({ appid: 2, genres: ['策略'] }),
+    mk({ appid: 3, genres: undefined }),
+  ];
+  it('未指定 genre 時不過濾', () => {
+    expect(applyFilters(ds, NO_FILTERS)).toHaveLength(3);
+    expect(applyFilters(ds, { ...NO_FILTERS, genre: null }).map(d => d.appid)).toEqual([1, 2, 3]);
+  });
+  it('指定 genre 只留含該類型者', () => {
+    expect(applyFilters(ds, { ...NO_FILTERS, genre: '動作' }).map(d => d.appid)).toEqual([1]);
+    expect(applyFilters(ds, { ...NO_FILTERS, genre: '角色扮演' }).map(d => d.appid)).toEqual([1]);
+  });
+  it('無 genres 欄位的 deal 在有指定 genre 時被排除', () => {
+    expect(applyFilters(ds, { ...NO_FILTERS, genre: '策略' }).map(d => d.appid)).toEqual([2]);
+  });
+});
+
+describe('buildSparklinePath', () => {
+  it('少於 2 點回空字串', () => {
+    expect(buildSparklinePath([], 100, 20)).toBe('');
+    expect(buildSparklinePath([5], 100, 20)).toBe('');
+  });
+  it('價格全平時走中線', () => {
+    expect(buildSparklinePath([10, 10], 100, 20)).toBe('M0,10 L100,10');
+  });
+  it('上升價格:低價在底、高價在頂(y 反向)', () => {
+    expect(buildSparklinePath([0, 10], 100, 20)).toBe('M0,20 L100,0');
+  });
+  it('下降價格', () => {
+    expect(buildSparklinePath([10, 0], 100, 20)).toBe('M0,0 L100,20');
   });
 });

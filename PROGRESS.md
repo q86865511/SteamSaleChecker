@@ -4,6 +4,12 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-25:B-4 列內 sparkline + 類型篩選(`feat/b4-sparkline-genres`,待 PR;R5 批次第 1 棒)**
+  - `Deal`(shared 正本 + web/view.ts 副本)加 `spark?: number[]`(最近價格序列降採樣)、`genres?: string[]`。
+  - 純函式 TDD:`downsampleSpark`(shared,均勻取樣保留頭尾)、`buildSparklinePath`(web/view.ts,SVG path、y 反向高價在頂)、`applyFilters` 加 genre 分支。
+  - 新 DB 表 `game_genres` + `replaceGameGenres`/`getGenresForApp`/`allGenres`(TDD);worker enrich 時入庫類型,烤 `genres.json`(全站類型聯集),deals.json 帶 spark/genres。
+  - 前端:列表加「走勢」欄(手刻 inline SVG sparkline,降綠/升紅/平灰)、卡片亦顯示;toolbar 加類型下拉(選項由 deals 的 genres 聯集動態填,中文字串對齊 DB)。
+  - i18n 加 `colTrend`/`filterType`/`filterTypeAny`(zh/en)。**119 測試**綠、worker/web/shared tsc 乾淨、build 4 頁;Preview 實測 sparkline 渲染、類型篩選(10→7→10)、無 console 錯誤。
 - **2026-06-25:Phase B-3 全收藏頁(`feat/favorites`,待 PR 審查)**
   - worker:enrich 時把遊戲名/封面/原價持久化進 `games` 表(原本閒置)+ 烤 `games-index.json`(LEFT JOIN game_stats 帶史低);收藏的遊戲即使目前沒特價也能顯示。TDD `upsertGame`/`gamesIndex`。
   - 新 `/favorites` 頁:登入感知載入收藏 → 比對 deals(現價/折扣)+ games-index(名/圖/史低)渲染卡片、★ 即時移除、連到 `/game`;header 加 ♥ 連結。
@@ -94,7 +100,7 @@
   - ✅ B-1 遊戲評價(PR #11 已 merge)。
   - ✅ B-2 商品詳細頁 `/game`(PR #12 已 merge)。
   - ✅ B-3 全收藏頁(`feat/favorites` 待 PR)。
-  - ⬜ B-4 sparkline + 類型篩選;B-5 目標價通知(自 C 移入)。
+  - 🔧 B-4 sparkline + 類型篩選(`feat/b4-sparkline-genres` 待 PR);⬜ B-5 目標價通知(自 C 移入)。
   - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
 - **Phase D**:Steam 願望單匯入。
 

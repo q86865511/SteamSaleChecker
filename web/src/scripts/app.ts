@@ -1,6 +1,6 @@
 import { twd, minutesAgo } from './format';
 import {
-  applyView, nextSortDir, fmtLowDate, fmtCountdown, NO_FILTERS,
+  applyView, nextSortDir, fmtLowDate, fmtCountdown, NO_FILTERS, buildSparklinePath,
   type Deal, type ViewState, type SortKey, type SortDir, type ViewMode, type Theme,
 } from './view';
 import { getMe, loadWishlist, addWish, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
@@ -29,6 +29,16 @@ function reviewCell(d: Deal): string {
   return `<span class="review${cls}" title="${esc(r.scoreDesc)} · ${r.total.toLocaleString('en-US')}">👍${r.positivePct}%</span>`;
 }
 
+// 列內迷你價格走勢 sparkline(降:綠、升:紅);資料不足回空字串。
+function sparkCell(d: Deal): string {
+  if (!d.spark || d.spark.length < 2) return '';
+  const path = buildSparklinePath(d.spark, 64, 18);
+  if (!path) return '';
+  const last = d.spark[d.spark.length - 1], first = d.spark[0];
+  const dir = last < first ? 'down' : (last > first ? 'up' : 'flat');
+  return `<svg class="spark ${dir}" viewBox="0 0 64 18" width="64" height="18" preserveAspectRatio="none" aria-hidden="true"><path d="${path}" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+
 function dealCard(d: Deal, t: Dict, wished: boolean): string {
   const diff = d.observedLowCents != null ? d.priceCents - d.observedLowCents : null;
   const low = d.isAtObservedLow
@@ -48,6 +58,7 @@ function dealCard(d: Deal, t: Dict, wished: boolean): string {
         <span class="price">${twd(d.priceCents)}</span>
         <span class="was">${twd(d.regularCents)}</span>
         ${reviewCell(d)}
+        <span style="margin-left:auto">${sparkCell(d)}</span>
       </div>
       <div class="row">${low}${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" style="margin-left:auto" aria-hidden="true"></span>` : ''}</div>
     </div>
@@ -61,6 +72,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <th class="col-num col-discount" aria-sort="none"><button class="col-sort" data-sort="discount">${esc(t.colDiscount)}</button></th>
       <th class="col-num col-price" aria-sort="none"><button class="col-sort" data-sort="price">${esc(t.colPrice)}</button></th>
       <th class="col-num col-regular" aria-sort="none"><button class="col-sort" data-sort="regular">${esc(t.colWas)}</button></th>
+      <th class="col-trend">${esc(t.colTrend)}</th>
       <th class="col-status">${esc(t.colStatus)}</th>
       <th class="col-when">${esc(t.colLowDate)}</th>
       <th class="col-when">${esc(t.colEndsIn)}</th>
@@ -76,6 +88,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <td class="col-num"><span class="badge badge-disc">-${d.discountPercent}%</span></td>
       <td class="col-num price">${twd(d.priceCents)}</td>
       <td class="col-num was">${twd(d.regularCents)}</td>
+      <td class="col-trend">${sparkCell(d)}</td>
       <td class="col-status">${status}</td>
       <td class="col-when">${esc(fmtLowDate(d.observedLowAt))}</td>
       <td class="col-when">${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" aria-hidden="true"></span>` : ''}</td>
@@ -152,6 +165,18 @@ export async function boot(): Promise<void> {
 
   const allDeals: Deal[] = deals;
   const state: ViewState = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: getViewMode(), filters: { ...NO_FILTERS } };
+
+  // 類型篩選下拉:由實際 deals 的 genres 聯集動態填(避免寫死英文清單與 DB 中文對不上)
+  const typeSel = document.getElementById('filter-type') as HTMLSelectElement | null;
+  if (typeSel) {
+    const genreSet = new Set<string>();
+    for (const d of allDeals) for (const g of d.genres ?? []) genreSet.add(g);
+    for (const g of [...genreSet].sort((a, b) => a.localeCompare(b, lang))) {
+      const o = document.createElement('option');
+      o.value = g; o.textContent = g;
+      typeSel.appendChild(o);
+    }
+  }
 
   function updateSortIndicators(): void {
     document.querySelectorAll<HTMLElement>('.deal-table th[aria-sort]').forEach(th => {
@@ -270,6 +295,10 @@ export async function boot(): Promise<void> {
   });
   document.getElementById('filter-atlow')?.addEventListener('change', (e) => {
     state.filters!.atLowOnly = (e.target as HTMLInputElement).checked;
+    render();
+  });
+  document.getElementById('filter-type')?.addEventListener('change', (e) => {
+    state.filters!.genre = (e.target as HTMLSelectElement).value || null;
     render();
   });
 

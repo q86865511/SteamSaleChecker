@@ -66,5 +66,8 @@
   "filterDiscount": "Min discount",
   "filterAny": "Any",
   "filterMaxPrice": "Max price (NT$)",
-  "filterAtLow": "At/below low only"
+  "filterAtLow": "At/below low only",
+  "filterType": "Genre",
+  "filterTypeAny": "All genres",
+  "colTrend": "Trend"
 }

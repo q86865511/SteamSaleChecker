@@ -66,5 +66,8 @@
   "filterDiscount": "最低折扣",
   "filterAny": "不限",
   "filterMaxPrice": "最高價(NT$)",
-  "filterAtLow": "只看 ≤ 史低"
+  "filterAtLow": "只看 ≤ 史低",
+  "filterType": "類型",
+  "filterTypeAny": "全部類型",
+  "colTrend": "走勢"
 }

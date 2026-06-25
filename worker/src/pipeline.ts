@@ -1,11 +1,13 @@
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import type { DB } from './db';
-import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked, upsertGame, gamesIndex } from './db';
+import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked, upsertGame, gamesIndex, replaceGameGenres, allGenres } from './db';
 import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids, fetchReviewSummary } from './sources/steam';
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
-import { isAtLow } from '@ssc/shared';
+import { isAtLow, downsampleSpark } from '@ssc/shared';
+
+const SPARK_POINTS = 24; // 列內迷你走勢圖的取樣點數
 import type { Deal, FreeGiveaway, Meta, GameDetail } from '@ssc/shared';
 import type { NewLow } from './notify';
 
@@ -29,6 +31,7 @@ export async function runPipeline(
   // 持久化遊戲基本資料(收藏頁需要:即使該遊戲目前沒特價也能顯示名稱/封面)
   for (const [appid, a] of enriched) {
     if (a.hasPrice || a.isFree) upsertGame(db, appid, a.nameZh, a.headerImage, a.regularCents, a.isFree, nowSec);
+    if (a.genres?.length) replaceGameGenres(db, appid, a.genres);
   }
 
   // 3. 寫價格歷史 + 維護最低;組 Deal(只收實際在特價者)
@@ -56,6 +59,8 @@ export async function runPipeline(
       observedLowAt: st?.observed_low_at ?? null,
       isAtObservedLow: isAtLow(a.priceCents, st?.observed_low_cents ?? null),
       observedMaxDiscount: st?.observed_max_discount ?? a.discountPercent,
+      spark: downsampleSpark(getPriceHistory(db, appid).map(p => p.price), SPARK_POINTS),
+      genres: a.genres,
     });
   }
   deals.sort((x, y) => x.rank - y.rank);
@@ -106,5 +111,7 @@ export async function runPipeline(
   }
   // 全遊戲輕量索引(收藏頁用)
   writeJsonAtomic(join(dataDir, 'games-index.json'), gamesIndex(db));
+  // 全站類型聯集(類型篩選下拉、通知類型偏好用)
+  writeJsonAtomic(join(dataDir, 'genres.json'), allGenres(db));
   return { deals, free, meta, newLows };
 }

@@ -18,6 +18,8 @@ export interface Deal {
   isAtObservedLow: boolean;
   observedMaxDiscount: number;
   review?: ReviewSummary | null;
+  spark?: number[];      // 最近價格序列(降採樣),供列內迷你走勢圖
+  genres?: string[];     // 類型(中文,來自 Steam l=tchinese)
 }
 // 商品詳細頁(/game)的 per-appid JSON 形狀
 export interface GameDetail {

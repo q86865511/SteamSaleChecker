@@ -5,6 +5,8 @@ export interface Deal {
   discountPercent: number; rank: number; discountExpiration?: number;
   observedLowCents: number | null; observedLowAt: number | null; isAtObservedLow: boolean; observedMaxDiscount: number;
   review?: { scoreDesc: string; positivePct: number; total: number } | null;
+  spark?: number[];      // 最近價格序列(降採樣),供列內迷你走勢圖
+  genres?: string[];     // 類型(中文,來自 Steam l=tchinese)
 }
 
 export type SortKey = 'rank' | 'discount' | 'price' | 'regular' | 'low';
@@ -16,8 +18,9 @@ export interface DealFilters {
   minDiscount: number;            // 最低折扣 %
   maxPriceCents: number | null;   // 最高價(cents);null = 不限
   atLowOnly: boolean;             // 只看目前 ≤ 本站史低
+  genre?: string | null;          // 類型;空/null = 不限
 }
-export const NO_FILTERS: DealFilters = { minDiscount: 0, maxPriceCents: null, atLowOnly: false };
+export const NO_FILTERS: DealFilters = { minDiscount: 0, maxPriceCents: null, atLowOnly: false, genre: null };
 
 export interface ViewState {
   searchQuery: string;
@@ -59,7 +62,23 @@ export function applyFilters(deals: Deal[], f: DealFilters): Deal[] {
   return deals.filter(d =>
     d.discountPercent >= f.minDiscount &&
     (f.maxPriceCents == null || d.priceCents <= f.maxPriceCents) &&
-    (!f.atLowOnly || d.isAtObservedLow));
+    (!f.atLowOnly || d.isAtObservedLow) &&
+    (!f.genre || (d.genres?.includes(f.genre) ?? false)));
+}
+
+// 由價格序列產生迷你 sparkline 的 SVG path d 字串;少於 2 點回空字串。
+// y 反向:高價在頂、低價在底;價格全平時走中線。
+export function buildSparklinePath(values: number[], w: number, h: number): string {
+  if (values.length < 2) return '';
+  const n = values.length;
+  const min = Math.min(...values), max = Math.max(...values), span = max - min;
+  const fmt = (v: number): string => String(Math.round(v * 10) / 10);
+  const pts = values.map((v, i) => {
+    const x = (i / (n - 1)) * w;
+    const y = span === 0 ? h / 2 : h - ((v - min) / span) * h;
+    return `${fmt(x)},${fmt(y)}`;
+  });
+  return 'M' + pts[0] + ' ' + pts.slice(1).map(p => 'L' + p).join(' ');
 }
 
 export function applyView(deals: Deal[], s: ViewState): Deal[] {
