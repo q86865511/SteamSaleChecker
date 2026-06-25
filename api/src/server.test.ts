@@ -27,6 +27,7 @@ describe('api smoke', () => {
     expect((await app.inject({ method:'PUT', url:'/api/wishlist/1/target', payload:{ targetLowCents:1000 } })).statusCode).toBe(401);
     expect((await app.inject({ method:'GET', url:'/api/notif/prefs' })).statusCode).toBe(401);
     expect((await app.inject({ method:'PUT', url:'/api/notif/prefs', payload:{ dropEnabled:false } })).statusCode).toBe(401);
+    expect((await app.inject({ method:'POST', url:'/api/wishlist/import', payload:{ steamId:'76561197960434622' } })).statusCode).toBe(401);
     await app.close();
   });
 

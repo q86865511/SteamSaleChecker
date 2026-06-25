@@ -43,3 +43,10 @@ export async function mergeLocalOnLogin(): Promise<void> {
 }
 export function discordLoginUrl(): string { return apiBase() + '/auth/discord'; }
 export async function logout(): Promise<void> { await api('/auth/logout', { method: 'POST' }); }
+// Phase D:從公開 Steam 願望單匯入(後端抓取);回傳匯入數與最新收藏,失敗回 null。
+export async function importSteamWishlist(steamId: string): Promise<{ imported: number; wishlist: number[] } | null> {
+  try {
+    const r = await api('/api/wishlist/import', { method: 'POST', body: JSON.stringify({ steamId }) });
+    return r.ok ? (await r.json()) as { imported: number; wishlist: number[] } : null;
+  } catch { return null; }
+}

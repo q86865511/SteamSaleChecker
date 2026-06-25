@@ -1,7 +1,7 @@
 import { twd } from './format';
 import { initTheme, setTheme, storeTheme } from './theme';
 import { getLang, dict, applyI18n, type Dict } from './i18n';
-import { getMe, loadWishlist, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
+import { getMe, loadWishlist, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, importSteamWishlist, type Me } from './wishlist';
 import { getTargets, putTarget } from './notif';
 import { type Theme } from './view';
 
@@ -56,6 +56,25 @@ export async function bootFavorites(): Promise<void> {
   const dealMap = new Map<number, FavDeal>(deals.map(d => [d.appid, d]));
   const idxMap = new Map<number, GameIndexEntry>(index.map(g => [g.appid, g]));
   const targets: Record<number, number> = loggedIn ? await getTargets() : {};
+
+  // Steam 願望單匯入(登入才顯示)
+  const importSec = document.getElementById('steam-import');
+  if (loggedIn && importSec) {
+    importSec.hidden = false;
+    document.getElementById('steam-import-btn')?.addEventListener('click', async () => {
+      const input = document.getElementById('steam-id-input') as HTMLInputElement | null;
+      const status = document.getElementById('steam-import-status');
+      const val = input?.value.trim();
+      if (!val) return;
+      if (status) status.textContent = '…';
+      const res = await importSteamWishlist(val);
+      if (res) {
+        for (const id of res.wishlist) wishSet.add(id);
+        render();
+        if (status) status.textContent = t.importDone.replace('{n}', String(res.imported));
+      } else if (status) { status.textContent = t.importFail; }
+    });
+  }
 
   const hostEl = document.getElementById('fav-list');
   if (!hostEl) return;

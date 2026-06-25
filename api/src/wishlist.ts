@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { DB } from './db';
 import { addWish, removeWish, listWish, mergeWish, setTargetLow, listTargets } from './db';
+import { extractSteamId64, parseWishlistAppids } from '@ssc/shared';
 
 const nowSec = (): number => Math.floor(Date.now() / 1000);
 function uid(req: FastifyRequest): number | undefined {
@@ -56,5 +57,22 @@ export function registerWishlist(app: FastifyInstance, db: DB): void {
     if (!listWish(db, u).includes(appid)) return reply.code(404).send({ error: 'not_wished' });
     setTargetLow(db, u, appid, targetLowCents ?? null);
     return { ok: true };
+  });
+
+  // Phase D:從公開 Steam 願望單匯入(IWishlistService,免金鑰;願望單需公開)
+  app.post('/api/wishlist/import', async (req, reply) => {
+    const u = uid(req);
+    if (!u) return reply.code(401).send({ error: 'not_logged_in' });
+    const { steamId } = (req.body ?? {}) as { steamId?: string };
+    const id = typeof steamId === 'string' ? extractSteamId64(steamId) : null;
+    if (!id) return reply.code(400).send({ error: 'bad_steamid' });
+    let appids: number[] = [];
+    try {
+      const r = await fetch(`https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=${id}`);
+      if (!r.ok) return reply.code(502).send({ error: 'steam_fetch_failed' });
+      appids = parseWishlistAppids(await r.json());
+    } catch { return reply.code(502).send({ error: 'steam_fetch_failed' }); }
+    if (appids.length) mergeWish(db, u, appids, nowSec());
+    return { imported: appids.length, wishlist: listWish(db, u) };
   });
 }

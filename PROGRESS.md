@@ -4,6 +4,12 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-26:Phase D Steam 願望單匯入(`feat/steam-import`,待 PR;R5 批次第 5 棒,疊在 notif 上)**
+  - **spike 確認**:Steam 2024–25 改版後,`store.../wishlistdata` 已不穩;改用 `api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=`(**免金鑰**,回 `response.items[].appid`)。
+  - 純函式 TDD:`extractSteamId64`(17 碼或 `/profiles/` 網址;vanity `/id/` 回 null)、`parseWishlistAppids`(放 shared)。
+  - API:`POST /api/wishlist/import { steamId }` → 後端抓公開願望單 → `mergeWish` → 回 `{imported, wishlist}`;壞 id 400、抓取失敗 502;401 守門。
+  - 前端:`/favorites` 登入後顯示匯入框(輸入 SteamID/網址 → 匯入 → 併入收藏重繪);`importSteamWishlist` 客戶端;i18n 6 鍵。
+  - **154 測試**綠、四 workspace tsc 乾淨、build、i18n 98/98;**實機 E2E**:個人檔網址→SteamID64→live 抓 41 筆→解析 41 appids 通過;Preview 匯入框登入閘正確。**登入後實際併入待使用者用自己帳號驗。**
 - **2026-06-26:通知設定 per-user 偏好子系統(`feat/notif-prefs`,待 PR;R5 批次第 4 棒,疊在 polish 上)**
   - **DB(worker+api 雙建)**:`notif_prefs`(drop/free/digest_hours/delivery)、`notif_genres`、`notif_free_sent`、`notif_digest_gates`;`NotifPrefs` 型別移 shared 共用。
   - **API**:`GET/PUT /api/notif/prefs`(部分合併 + genres 全量取代;驗證 digest∈{0,24,168}、delivery∈{channel,dm});`getNotifPrefs`/`putNotifPrefs`(TDD)。
@@ -124,7 +130,7 @@
   - ✅ B-3 全收藏頁(`feat/favorites` 待 PR)。
   - 🔧 B-4 sparkline+類型篩選(`feat/b4-sparkline-genres`);🔧 B-5 目標價(`feat/b5-target-price`);🔧 小尾巴+bug(`feat/polish-fixes`);🔧 通知設定(`feat/notif-prefs`)— 皆待 PR(R5 批次,疊加分支)。
   - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
-- **Phase D**:Steam 願望單匯入。
+- 🔧 **Phase D**:Steam 願望單匯入(`feat/steam-import` 待 PR)。
 
 ## 已知問題
 - 「史低」冷啟動:第一次觀測即視為最低。已接 **ITAD 每日刷新校正**(本機已驗證;**正式站於部署後 worker 首輪自動 seed**,之後每日刷新)。文案仍誠實標「追蹤以來最低」。
