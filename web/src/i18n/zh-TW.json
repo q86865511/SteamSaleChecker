@@ -69,5 +69,11 @@
   "filterAtLow": "只看 ≤ 史低",
   "filterType": "類型",
   "filterTypeAny": "全部類型",
-  "colTrend": "走勢"
+  "colTrend": "走勢",
+  "targetPriceLabel": "目標價(NT$)",
+  "targetPricePh": "例:299",
+  "targetPriceHint": "跌破即通知",
+  "save": "儲存",
+  "saved": "已儲存",
+  "saveFailed": "儲存失敗"
 }

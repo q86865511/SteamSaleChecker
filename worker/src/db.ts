@@ -37,6 +37,8 @@ export function openDb(path: string): DB {
   addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
   addColumnIfMissing(db, 'free_giveaways', 'notified', 'INTEGER DEFAULT 0');
   addColumnIfMissing(db, 'free_giveaways', 'notified_at', 'INTEGER');
+  // 遷移:wishlist 加每款目標價(NULL=未設);worker 通知時讀取
+  addColumnIfMissing(db, 'wishlist', 'target_low_cents', 'INTEGER');
   return db;
 }
 
@@ -76,10 +78,10 @@ export function recordPriceAndLow(
       observed_low_cents=@low, observed_low_at=@lowAt, observed_max_discount=@maxDisc
   `).run({ appid, low: lowCents, lowAt, maxDisc });
 }
-export interface Wisher { userId: number; discordId: string; }
+export interface Wisher { userId: number; discordId: string; targetLowCents: number | null; }
 export function getWishersForApp(db: DB, appid: number): Wisher[] {
   return db.prepare(
-    `SELECT w.user_id AS userId, u.discord_id AS discordId
+    `SELECT w.user_id AS userId, u.discord_id AS discordId, w.target_low_cents AS targetLowCents
      FROM wishlist w JOIN users u ON u.id = w.user_id
      WHERE w.appid = ? AND u.discord_id IS NOT NULL`).all(appid) as Wisher[];
 }

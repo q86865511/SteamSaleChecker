@@ -9,6 +9,14 @@ describe('formatNotifyMessage', () => {
     expect(m).toContain('NT$ 493');
     expect(m).toContain('https://store.steampowered.com/app/1145350/');
   });
+  it('預設(drop)用「創新低」措辭', () => {
+    expect(formatNotifyMessage({ discordId: '1', name: 'G', lowCents: 100, appid: 2 })).toContain('創新低');
+  });
+  it('reason=target 用「目標價」措辭', () => {
+    const m = formatNotifyMessage({ discordId: '1', name: 'G', lowCents: 100, appid: 2, reason: 'target' });
+    expect(m).toContain('目標價');
+    expect(m).not.toContain('創新低');
+  });
 });
 
 describe('formatGiveawayMessage', () => {

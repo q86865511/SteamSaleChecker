@@ -31,11 +31,13 @@ describe('db', () => {
     expect(alreadyNotified(db, 1, 10, 50000)).toBe(true);
     expect(alreadyNotified(db, 1, 10, 40000)).toBe(false);
   });
-  it('getWishersForApp 回收藏該遊戲且有 discord_id 者', () => {
+  it('getWishersForApp 回收藏該遊戲且有 discord_id 者(含目標價,未設為 null)', () => {
     const db = openDb(':memory:');
     db.prepare("INSERT INTO users(id,discord_id,username) VALUES(1,'d1','A')").run();
     db.prepare('INSERT INTO wishlist(user_id,appid,added_at) VALUES(1,10,1000)').run();
-    expect(getWishersForApp(db, 10)).toEqual([{ userId: 1, discordId: 'd1' }]);
+    expect(getWishersForApp(db, 10)).toEqual([{ userId: 1, discordId: 'd1', targetLowCents: null }]);
+    db.prepare('UPDATE wishlist SET target_low_cents=20000 WHERE user_id=1 AND appid=10').run();
+    expect(getWishersForApp(db, 10)[0].targetLowCents).toBe(20000);
   });
 });
 

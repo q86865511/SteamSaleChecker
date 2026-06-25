@@ -1,7 +1,10 @@
 import { formatTwd } from '@ssc/shared';
 
-export function formatNotifyMessage(p: { discordId: string; name: string; lowCents: number; appid: number }): string {
-  return `<@${p.discordId}> 🎮 你收藏的《${p.name}》創新低 ${formatTwd(p.lowCents)}!\n` +
+export function formatNotifyMessage(
+  p: { discordId: string; name: string; lowCents: number; appid: number; reason?: 'drop' | 'target' },
+): string {
+  const verb = p.reason === 'target' ? '跌破你設定的目標價' : '創新低';
+  return `<@${p.discordId}> 🎮 你收藏的《${p.name}》${verb} ${formatTwd(p.lowCents)}!\n` +
     `https://store.steampowered.com/app/${p.appid}/`;
 }
 

@@ -3,6 +3,8 @@ import { renderPriceChart, type PricePoint } from './chart';
 import { fmtCountdown, fmtLowDate, readChartPalette, type ChartPalette, type Theme } from './view';
 import { initTheme, setTheme, storeTheme } from './theme';
 import { getLang, dict, applyI18n, type Dict } from './i18n';
+import { getMe, loadWishlist } from './wishlist';
+import { getTargets, putTarget } from './notif';
 import type { GameDetail } from '@ssc/shared';
 
 function esc(s: string): string {
@@ -60,6 +62,7 @@ export async function bootGame(): Promise<void> {
         ${d.releaseDate ? `<p class="muted small">${esc(t.detailReleased)}:${esc(d.releaseDate)}</p>` : ''}
         ${d.genres && d.genres.length ? `<div class="row">${d.genres.map(g => `<span class="pill">${esc(g)}</span>`).join('')}</div>` : ''}
         <p><a class="lang-btn" href="https://store.steampowered.com/app/${d.appid}/" target="_blank" rel="noopener">${esc(t.viewOnSteam)}</a></p>
+        <div id="gd-target" class="gd-target" hidden></div>
       </div>
     </div>
     <section><h2>${esc(t.priceHistory)}</h2><div id="gd-chart" class="gd-chart"></div></section>
@@ -71,6 +74,28 @@ export async function bootGame(): Promise<void> {
   let points: PricePoint[] = [];
   try { const r = await fetch(`/data/history/${appid}.json`); if (r.ok) points = await r.json(); } catch { /* ignore */ }
   if (chartEl) renderPriceChart(chartEl, points, d.observedLowCents, t.chartEmpty, currentPalette());
+
+  // 目標價:登入且已收藏才顯示(跌破即通知)
+  void (async () => {
+    const me = await getMe();
+    if (!me) return;
+    const wished = (await loadWishlist(true)).has(appid);
+    const slot = document.getElementById('gd-target');
+    if (!wished || !slot) return;
+    const cur = (await getTargets())[appid];
+    slot.hidden = false;
+    slot.innerHTML =
+      `<label class="target-lbl">${esc(t.targetPriceLabel)} ` +
+      `<input id="target-input" type="number" min="0" step="10" inputmode="numeric" placeholder="${esc(t.targetPricePh)}" value="${cur != null ? Math.round(cur / 100) : ''}"></label>` +
+      `<button id="target-save" class="ctl-btn" type="button">${esc(t.save)}</button>` +
+      `<span class="muted small">${esc(t.targetPriceHint)}</span><span id="target-status" class="muted small"></span>`;
+    document.getElementById('target-save')?.addEventListener('click', async () => {
+      const v = Number((document.getElementById('target-input') as HTMLInputElement).value);
+      const ok = await putTarget(appid, v > 0 ? Math.round(v * 100) : null);
+      const st = document.getElementById('target-status');
+      if (st) st.textContent = ok ? `✓ ${t.saved}` : `✗ ${t.saveFailed}`;
+    });
+  })();
 
   const tick = (): void => {
     const nowSec = Date.now() / 1000;

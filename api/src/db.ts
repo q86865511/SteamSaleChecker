@@ -20,6 +20,11 @@ export function openDb(path: string = defaultDbPath()): DB {
   return db;
 }
 
+function addColumnIfMissing(db: DB, table: string, col: string, decl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some(c => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`);
+}
+
 export function ensureAuthTables(db: DB): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users(
@@ -28,6 +33,8 @@ export function ensureAuthTables(db: DB): void {
     CREATE TABLE IF NOT EXISTS wishlist(
       user_id INTEGER, appid INTEGER, added_at INTEGER, PRIMARY KEY(user_id, appid));
   `);
+  // 遷移:wishlist 加每款目標價(NULL=未設);與 worker 端一致
+  addColumnIfMissing(db, 'wishlist', 'target_low_cents', 'INTEGER');
 }
 
 export interface User { id: number; discord_id: string; username: string; avatar: string | null; }
@@ -58,4 +65,17 @@ export function mergeWish(db: DB, userId: number, appids: number[], at: number):
   const stmt = db.prepare('INSERT OR IGNORE INTO wishlist(user_id, appid, added_at) VALUES(?,?,?)');
   const tx = db.transaction((ids: number[]) => { for (const id of ids) stmt.run(userId, id, at); });
   tx(appids);
+}
+
+// 目標價:設在 wishlist 列上(只對已收藏的遊戲生效;cents=null 清除)。
+export function setTargetLow(db: DB, userId: number, appid: number, cents: number | null): void {
+  db.prepare('UPDATE wishlist SET target_low_cents = ? WHERE user_id = ? AND appid = ?').run(cents, userId, appid);
+}
+export function listTargets(db: DB, userId: number): Record<number, number> {
+  const rows = db.prepare(
+    'SELECT appid, target_low_cents AS cents FROM wishlist WHERE user_id = ? AND target_low_cents IS NOT NULL')
+    .all(userId) as { appid: number; cents: number }[];
+  const out: Record<number, number> = {};
+  for (const r of rows) out[r.appid] = r.cents;
+  return out;
 }

@@ -23,6 +23,8 @@ describe('api smoke', () => {
     expect((await app.inject({ method:'POST', url:'/api/wishlist', payload:{ appid:1 } })).statusCode).toBe(401);
     expect((await app.inject({ method:'DELETE', url:'/api/wishlist/1' })).statusCode).toBe(401);
     expect((await app.inject({ method:'POST', url:'/api/wishlist/merge', payload:{ appids:[1] } })).statusCode).toBe(401);
+    expect((await app.inject({ method:'GET', url:'/api/wishlist/targets' })).statusCode).toBe(401);
+    expect((await app.inject({ method:'PUT', url:'/api/wishlist/1/target', payload:{ targetLowCents:1000 } })).statusCode).toBe(401);
     await app.close();
   });
 

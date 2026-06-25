@@ -2,6 +2,7 @@ import { twd } from './format';
 import { initTheme, setTheme, storeTheme } from './theme';
 import { getLang, dict, applyI18n, type Dict } from './i18n';
 import { getMe, loadWishlist, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
+import { getTargets, putTarget } from './notif';
 import { type Theme } from './view';
 
 interface GameIndexEntry { appid: number; nameZh: string; headerImage: string; observedLowCents: number | null; observedLowAt: number | null; }
@@ -54,6 +55,7 @@ export async function bootFavorites(): Promise<void> {
   } catch { /* ignore */ }
   const dealMap = new Map<number, FavDeal>(deals.map(d => [d.appid, d]));
   const idxMap = new Map<number, GameIndexEntry>(index.map(g => [g.appid, g]));
+  const targets: Record<number, number> = loggedIn ? await getTargets() : {};
 
   const hostEl = document.getElementById('fav-list');
   if (!hostEl) return;
@@ -69,6 +71,13 @@ export async function bootFavorites(): Promise<void> {
       ? `<div class="row"><span class="badge badge-disc">-${deal.discountPercent}%</span><span class="price">${twd(deal.priceCents)}</span><span class="was">${twd(deal.regularCents)}</span></div>`
       : `<div class="row"><span class="muted small">${esc(t.favNotOnSale)}</span></div>`;
     const lowRow = low != null ? `<div class="row"><span class="muted small">${esc(t.atLow)}:${twd(low)}</span></div>` : '';
+    const cur = targets[appid];
+    const targetRow = loggedIn
+      ? `<div class="row gd-target"><label class="target-lbl">${esc(t.targetPriceLabel)} ` +
+        `<input class="target-input" data-appid="${appid}" type="number" min="0" step="10" inputmode="numeric" placeholder="${esc(t.targetPricePh)}" value="${cur != null ? Math.round(cur / 100) : ''}"></label>` +
+        `<button class="target-save ctl-btn" type="button" data-appid="${appid}">${esc(t.save)}</button>` +
+        `<span class="target-status muted small" data-appid="${appid}"></span></div>`
+      : '';
     return `<article class="card clickable" data-appid="${appid}">
       ${img ? `<a href="/game?appid=${appid}" tabindex="-1"><img class="thumb" src="${esc(img)}" alt="" loading="lazy" /></a>` : ''}
       <div class="card-body">
@@ -76,7 +85,7 @@ export async function bootFavorites(): Promise<void> {
           <p class="card-title"><a class="card-title-link" href="/game?appid=${appid}">${esc(name)}</a></p>
           <button class="wish-btn on" data-appid="${appid}" aria-label="${esc(t.wishlist)}" aria-pressed="true">★</button>
         </div>
-        ${priceRow}${lowRow}
+        ${priceRow}${lowRow}${targetRow}
       </div>
     </article>`;
   }
@@ -96,6 +105,20 @@ export async function bootFavorites(): Promise<void> {
       try { await removeWish(appid, loggedIn); wishSet.delete(appid); render(); } catch { /* keep */ }
       return;
     }
+    const saveBtn = target.closest<HTMLButtonElement>('.target-save');
+    if (saveBtn) {
+      e.preventDefault();
+      const appid = Number(saveBtn.dataset.appid);
+      const input = host.querySelector<HTMLInputElement>(`.target-input[data-appid="${appid}"]`);
+      const v = Number(input?.value);
+      const cents = v > 0 ? Math.round(v * 100) : null;
+      const ok = await putTarget(appid, cents);
+      if (ok) { if (cents == null) delete targets[appid]; else targets[appid] = cents; }
+      const st = host.querySelector<HTMLElement>(`.target-status[data-appid="${appid}"]`);
+      if (st) st.textContent = ok ? `✓ ${t.saved}` : `✗ ${t.saveFailed}`;
+      return;
+    }
+    if (target.closest('.gd-target')) return; // 目標價輸入區不導航
     if (target.closest('a')) return;
     const card = target.closest<HTMLElement>('.card.clickable');
     if (card) location.href = `/game?appid=${Number(card.dataset.appid)}`;

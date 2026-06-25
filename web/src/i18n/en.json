@@ -69,5 +69,11 @@
   "filterAtLow": "At/below low only",
   "filterType": "Genre",
   "filterTypeAny": "All genres",
-  "colTrend": "Trend"
+  "colTrend": "Trend",
+  "targetPriceLabel": "Target price (NT$)",
+  "targetPricePh": "e.g. 299",
+  "targetPriceHint": "Notify when it drops below",
+  "save": "Save",
+  "saved": "Saved",
+  "saveFailed": "Save failed"
 }

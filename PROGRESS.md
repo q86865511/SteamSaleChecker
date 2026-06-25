@@ -4,6 +4,13 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-25:B-5 目標價(`feat/b5-target-price`,待 PR;R5 批次第 2 棒,疊在 b4 上)**
+  - `wishlist` 加 `target_low_cents` 欄(worker+api 雙端 `addColumnIfMissing` 遷移,NULL=未設)。
+  - 純函式 `shouldNotifyNewLow`(TDD):類型白名單無交集→不發;設目標→命中(low≤target)才發 `target`(覆蓋 drop,設目標就只看目標);否則看 `dropEnabled`。`collectPending` 改用之(此 PR drop 預設開、genres 預設空,prefs 留 PR4)。
+  - `getWishersForApp` 帶 `targetLowCents`;`formatNotifyMessage` 加 `reason`(target→「跌破目標價」措辭)。
+  - API:`GET /api/wishlist/targets`、`PUT /api/wishlist/:appid/target`(驗證已收藏/非負/null 清除);api db `setTargetLow`/`listTargets`(TDD)。
+  - 前端:新 `notif.ts`(`getTargets`/`putTarget`);`/game` 與 `/favorites` 在登入且已收藏時顯示 TWD 目標價輸入,存檔即 PUT。i18n 加 targetPrice* / save*。
+  - **129 測試**綠、worker/api/web tsc 乾淨、build;Preview 登出路徑無錯(目標 UI 正確隱藏)。真實 Discord 目標通知待使用者用 bot 驗一輪。
 - **2026-06-25:B-4 列內 sparkline + 類型篩選(`feat/b4-sparkline-genres`,待 PR;R5 批次第 1 棒)**
   - `Deal`(shared 正本 + web/view.ts 副本)加 `spark?: number[]`(最近價格序列降採樣)、`genres?: string[]`。
   - 純函式 TDD:`downsampleSpark`(shared,均勻取樣保留頭尾)、`buildSparklinePath`(web/view.ts,SVG path、y 反向高價在頂)、`applyFilters` 加 genre 分支。
@@ -100,7 +107,7 @@
   - ✅ B-1 遊戲評價(PR #11 已 merge)。
   - ✅ B-2 商品詳細頁 `/game`(PR #12 已 merge)。
   - ✅ B-3 全收藏頁(`feat/favorites` 待 PR)。
-  - 🔧 B-4 sparkline + 類型篩選(`feat/b4-sparkline-genres` 待 PR);⬜ B-5 目標價通知(自 C 移入)。
+  - 🔧 B-4 sparkline + 類型篩選(`feat/b4-sparkline-genres` 待 PR);🔧 B-5 目標價(`feat/b5-target-price` 待 PR)。
   - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
 - **Phase D**:Steam 願望單匯入。
 
