@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatNotifyMessage, formatGiveawayMessage, formatDigest } from './discord-bot';
+import { formatNotifyMessage, formatGiveawayMessage, formatDigest, formatPersonalGiveawayMessage, sendDm } from './discord-bot';
 
 describe('formatNotifyMessage', () => {
   it('含 mention、書名號名稱、台幣、商店連結', () => {
@@ -51,4 +51,35 @@ describe('formatDigest', () => {
     expect(m.match(/G\d/g)?.length).toBe(3);
   });
   it('空陣列回 null', () => expect(formatDigest([], 5)).toBeNull());
+});
+
+describe('formatPersonalGiveawayMessage', () => {
+  it('前綴 @mention,內含 giveaway 內容', () => {
+    const m = formatPersonalGiveawayMessage('123', { title: 'Cool', url: 'https://x/1', type: 'game', platforms: 'Steam', end_date: null, worth_usd: null });
+    expect(m.startsWith('<@123>')).toBe(true);
+    expect(m).toContain('Cool');
+  });
+});
+
+describe('sendDm', () => {
+  it('先開 DM 頻道、再對該頻道發訊息', async () => {
+    const calls: { url: string; opts: any }[] = [];
+    const orig = globalThis.fetch;
+    (globalThis as any).fetch = async (url: string, opts: any) => {
+      calls.push({ url, opts });
+      if (url.includes('/users/@me/channels')) return { ok: true, status: 200, json: async () => ({ id: 'dm1' }) };
+      return { ok: true, status: 204 };
+    };
+    try { await sendDm('tok', '123', 'hi'); } finally { globalThis.fetch = orig; }
+    expect(calls[0].url).toContain('/users/@me/channels');
+    expect(JSON.parse(calls[0].opts.body).recipient_id).toBe('123');
+    expect(calls[1].url).toContain('/channels/dm1/messages');
+    expect(JSON.parse(calls[1].opts.body).content).toBe('hi');
+  });
+  it('DM 關閉(post 403)時 throw', async () => {
+    const orig = globalThis.fetch;
+    (globalThis as any).fetch = async (url: string) =>
+      url.includes('/users/@me/channels') ? { ok: true, status: 200, json: async () => ({ id: 'dm1' }) } : { ok: false, status: 403 };
+    try { await expect(sendDm('tok', '123', 'hi')).rejects.toThrow(); } finally { globalThis.fetch = orig; }
+  });
 });

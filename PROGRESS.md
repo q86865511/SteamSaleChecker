@@ -4,6 +4,13 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-26:通知設定 per-user 偏好子系統(`feat/notif-prefs`,待 PR;R5 批次第 4 棒,疊在 polish 上)**
+  - **DB(worker+api 雙建)**:`notif_prefs`(drop/free/digest_hours/delivery)、`notif_genres`、`notif_free_sent`、`notif_digest_gates`;`NotifPrefs` 型別移 shared 共用。
+  - **API**:`GET/PUT /api/notif/prefs`(部分合併 + genres 全量取代;驗證 digest∈{0,24,168}、delivery∈{channel,dm});`getNotifPrefs`/`putNotifPrefs`(TDD)。
+  - **Worker**:`getNotifPrefsForUser` + 免費/摘要 gate 助手(TDD);`collectPending` 改用真實偏好(drop 開關 + 類型白名單 + delivery);`dispatchNotifications` 依 delivery 走頻道@或 `sendDm`(開 DM→發;403→throw 不標記;TDD mock fetch)。
+  - **個人免費**(`free-personal.ts`):只對本輪新出現的 Steam 免費、依各自 delivery 通知(避免剛開啟就被 backlog 轟炸);**個人摘要**(`maybeSendPersonalDigests`):各自 gate + 依類型白名單過濾(`filterDealsByGenres` TDD)+ delivery。→ 使用者不必 SSH 改 `SSC_DIGEST_HOURS` 即可自訂每日/每週摘要。
+  - **設定頁**:登入才顯示的通知區(降價/免費/摘要/方式 radiogroup + 類型多選,由 `genres.json` 動態產生);未登入顯示提示。`notif.ts` 加 `getNotifPrefs`/`putNotifPrefs`。i18n 加 14 鍵(zh/en 各 92)。
+  - **147 測試**綠、四 workspace tsc 乾淨、build、i18n parity;Preview 登出路徑(提示顯示、區塊隱藏、4 radiogroup+類型 host 在位)無錯。**登入後 UI 讀寫 + 真實 Discord 頻道/DM/個人免費/摘要待使用者用 bot 驗一輪**。
 - **2026-06-26:小尾巴 + 2 bug(`feat/polish-fixes`,待 PR;R5 批次第 3 棒,疊在 b5 上)**
   - **倒數誠實標示**(bug):已查證 `appdetails`/商店頁/`featuredcategories` 後,熱銷搜尋來的多數特價無公告結束日(無便宜來源可補);無 `discountExpiration` 者改顯示「特價中」而非空白(列表/卡片/詳細頁),i18n `onSaleNoEnd`。
   - **免費只看 Steam**(bug):純函式 `isSteamGiveaway` + `keepForeverGame` 加平台過濾(TDD);bake 即過濾,實測 free 11→1(只剩 Steam)。
@@ -115,7 +122,7 @@
   - ✅ B-1 遊戲評價(PR #11 已 merge)。
   - ✅ B-2 商品詳細頁 `/game`(PR #12 已 merge)。
   - ✅ B-3 全收藏頁(`feat/favorites` 待 PR)。
-  - 🔧 B-4 sparkline + 類型篩選(`feat/b4-sparkline-genres` 待 PR);🔧 B-5 目標價(`feat/b5-target-price` 待 PR)。
+  - 🔧 B-4 sparkline+類型篩選(`feat/b4-sparkline-genres`);🔧 B-5 目標價(`feat/b5-target-price`);🔧 小尾巴+bug(`feat/polish-fixes`);🔧 通知設定(`feat/notif-prefs`)— 皆待 PR(R5 批次,疊加分支)。
   - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
 - **Phase D**:Steam 願望單匯入。
 

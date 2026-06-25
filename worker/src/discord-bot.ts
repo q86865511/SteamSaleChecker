@@ -30,6 +30,31 @@ export function formatDigest(
   return `📊 Steam 特價精選 Top ${top.length}\n${lines.join('\n')}\nhttps://steam.terrychou.com/`;
 }
 
+// 個人免費領取通知(私訊或頻道 @);沿用頻道公告措辭並前綴 mention。
+export function formatPersonalGiveawayMessage(discordId: string, g: {
+  title: string; url: string; type: string; platforms: string; end_date?: string | null; worth_usd?: string | null;
+}): string {
+  return `<@${discordId}> ${formatGiveawayMessage(g)}`;
+}
+
+// 私訊使用者:先開 DM 頻道(POST /users/@me/channels),再對該頻道發訊息。
+// DM 關閉/封鎖會回 403 → throw,由呼叫端 try/catch、記錄、不標記(下輪重試),不中斷主流程。
+export async function sendDm(botToken: string, recipientId: string, content: string): Promise<void> {
+  const open = await fetch('https://discord.com/api/v10/users/@me/channels', {
+    method: 'POST',
+    headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipient_id: recipientId }),
+  });
+  if (!open.ok) throw new Error(`dm open ${open.status}`);
+  const { id } = (await open.json()) as { id: string };
+  const res = await fetch(`https://discord.com/api/v10/channels/${id}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+  });
+  if (!res.ok) throw new Error(`dm post ${res.status}`);
+}
+
 // allowMentions 預設 false:頻道公告(免費/摘要)不解析任何 mention,避免被外部標題注入 <@id> 觸發 ping。
 // 僅個人降價通知(formatNotifyMessage,含 <@discordId>)需傳 true。
 export async function postChannelMessage(

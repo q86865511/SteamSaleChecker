@@ -1,11 +1,12 @@
 import type { DB } from './db';
-import { getWishersForApp, getGenresForApp, alreadyNotified, markNotified } from './db';
-import { formatNotifyMessage, postChannelMessage } from './discord-bot';
+import { getWishersForApp, getGenresForApp, getNotifPrefsForUser, alreadyNotified, markNotified } from './db';
+import { formatNotifyMessage, postChannelMessage, sendDm } from './discord-bot';
+import type { NotifDelivery } from '@ssc/shared';
 
 export interface NewLow { appid: number; name: string; lowCents: number; }
 export type NotifyReason = 'drop' | 'target';
 export interface Pending {
-  userId: number; discordId: string; appid: number; name: string; lowCents: number; reason: NotifyReason;
+  userId: number; discordId: string; appid: number; name: string; lowCents: number; reason: NotifyReason; delivery: NotifDelivery;
 }
 
 export interface NotifyDecisionInput {
@@ -30,12 +31,13 @@ export function collectPending(db: DB, newLows: NewLow[]): Pending[] {
   for (const nl of newLows) {
     const appGenres = getGenresForApp(db, nl.appid);
     for (const w of getWishersForApp(db, nl.appid)) {
+      const prefs = getNotifPrefsForUser(db, w.userId);
       const reason = shouldNotifyNewLow({
-        dropEnabled: true, targetLowCents: w.targetLowCents, genres: [], appGenres, lowCents: nl.lowCents,
+        dropEnabled: prefs.dropEnabled, targetLowCents: w.targetLowCents, genres: prefs.genres, appGenres, lowCents: nl.lowCents,
       });
       if (!reason) continue;
       if (!alreadyNotified(db, w.userId, nl.appid, nl.lowCents)) {
-        out.push({ userId: w.userId, discordId: w.discordId, appid: nl.appid, name: nl.name, lowCents: nl.lowCents, reason });
+        out.push({ userId: w.userId, discordId: w.discordId, appid: nl.appid, name: nl.name, lowCents: nl.lowCents, reason, delivery: prefs.delivery });
       }
     }
   }
@@ -48,8 +50,9 @@ export async function dispatchNotifications(
   let sent = 0;
   for (const p of pending) {
     try {
-      await postChannelMessage(botToken, channelId,
-        formatNotifyMessage({ discordId: p.discordId, name: p.name, lowCents: p.lowCents, appid: p.appid, reason: p.reason }), true);
+      const content = formatNotifyMessage({ discordId: p.discordId, name: p.name, lowCents: p.lowCents, appid: p.appid, reason: p.reason });
+      if (p.delivery === 'dm') await sendDm(botToken, p.discordId, content);
+      else await postChannelMessage(botToken, channelId, content, true);
       markNotified(db, p.userId, p.appid, p.lowCents, nowSec);
       sent++;
     } catch (e) {

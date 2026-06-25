@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { evaluateLow, type FreeGiveaway, type ReviewSummary } from '@ssc/shared';
+import { evaluateLow, type FreeGiveaway, type ReviewSummary, type NotifPrefs, type NotifDelivery } from '@ssc/shared';
 export type DB = Database.Database;
 export function openDb(path: string): DB {
   const db = new Database(path);
@@ -32,6 +32,16 @@ export function openDb(path: string): DB {
       appid INTEGER PRIMARY KEY, score_desc TEXT, positive_pct INTEGER, total INTEGER, reviewed_at INTEGER);
     CREATE TABLE IF NOT EXISTS game_genres(
       appid INTEGER, genre TEXT, PRIMARY KEY(appid, genre));
+    CREATE TABLE IF NOT EXISTS notif_prefs(
+      user_id INTEGER PRIMARY KEY, drop_enabled INTEGER NOT NULL DEFAULT 1,
+      free_enabled INTEGER NOT NULL DEFAULT 0, digest_hours INTEGER NOT NULL DEFAULT 0,
+      delivery TEXT NOT NULL DEFAULT 'channel', updated_at INTEGER);
+    CREATE TABLE IF NOT EXISTS notif_genres(
+      user_id INTEGER, genre TEXT, PRIMARY KEY(user_id, genre));
+    CREATE TABLE IF NOT EXISTS notif_free_sent(
+      user_id INTEGER, giveaway_id TEXT, notified_at INTEGER, PRIMARY KEY(user_id, giveaway_id));
+    CREATE TABLE IF NOT EXISTS notif_digest_gates(
+      user_id INTEGER PRIMARY KEY, last_sent_at INTEGER);
   `);
   // 遷移:早期 free_giveaways 無 first_seen/notified/notified_at(SQLite 無 ADD COLUMN IF NOT EXISTS)
   addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
@@ -125,6 +135,45 @@ export function pendingGiveaways(db: DB): PendingGiveaway[] {
 }
 export function markGiveawayNotified(db: DB, id: string, now: number): void {
   db.prepare('UPDATE free_giveaways SET notified=1, notified_at=@now WHERE id=@id').run({ id, now });
+}
+
+// --- 通知偏好(per-user;worker 端讀取以決定對誰、用什麼方式發)---
+const NOTIF_DEFAULTS = { dropEnabled: true, freeEnabled: false, digestHours: 0, delivery: 'channel' as NotifDelivery };
+export function getNotifPrefsForUser(db: DB, userId: number): NotifPrefs {
+  const row = db.prepare('SELECT drop_enabled, free_enabled, digest_hours, delivery FROM notif_prefs WHERE user_id = ?')
+    .get(userId) as { drop_enabled: number; free_enabled: number; digest_hours: number; delivery: string } | undefined;
+  const genres = (db.prepare('SELECT genre FROM notif_genres WHERE user_id = ? ORDER BY genre').all(userId) as { genre: string }[]).map(r => r.genre);
+  if (!row) return { ...NOTIF_DEFAULTS, genres };
+  return {
+    dropEnabled: !!row.drop_enabled, freeEnabled: !!row.free_enabled,
+    digestHours: row.digest_hours, delivery: row.delivery === 'dm' ? 'dm' : 'channel', genres,
+  };
+}
+export interface FreeRecipient { userId: number; discordId: string; delivery: NotifDelivery; }
+export function usersWantingFree(db: DB): FreeRecipient[] {
+  return db.prepare(`SELECT p.user_id AS userId, u.discord_id AS discordId, p.delivery AS delivery
+    FROM notif_prefs p JOIN users u ON u.id = p.user_id
+    WHERE p.free_enabled = 1 AND u.discord_id IS NOT NULL`).all() as FreeRecipient[];
+}
+export function freeAlreadySent(db: DB, userId: number, giveawayId: string): boolean {
+  return !!db.prepare('SELECT 1 FROM notif_free_sent WHERE user_id = ? AND giveaway_id = ?').get(userId, giveawayId);
+}
+export function markFreeSent(db: DB, userId: number, giveawayId: string, now: number): void {
+  db.prepare('INSERT OR IGNORE INTO notif_free_sent(user_id, giveaway_id, notified_at) VALUES(?,?,?)').run(userId, giveawayId, now);
+}
+export interface DigestRecipient { userId: number; discordId: string; delivery: NotifDelivery; digestHours: number; }
+export function usersWantingDigest(db: DB): DigestRecipient[] {
+  return db.prepare(`SELECT p.user_id AS userId, u.discord_id AS discordId, p.delivery AS delivery, p.digest_hours AS digestHours
+    FROM notif_prefs p JOIN users u ON u.id = p.user_id
+    WHERE p.digest_hours > 0 AND u.discord_id IS NOT NULL`).all() as DigestRecipient[];
+}
+export function lastPersonalDigest(db: DB, userId: number): number | null {
+  const r = db.prepare('SELECT last_sent_at AS m FROM notif_digest_gates WHERE user_id = ?').get(userId) as { m: number } | undefined;
+  return r?.m ?? null;
+}
+export function recordPersonalDigest(db: DB, userId: number, now: number): void {
+  db.prepare('INSERT INTO notif_digest_gates(user_id, last_sent_at) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET last_sent_at = ?')
+    .run(userId, now, now);
 }
 
 // --- 報告 gating(每日/每週摘要)---

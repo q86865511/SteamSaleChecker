@@ -4,6 +4,7 @@ import secureSession from '@fastify/secure-session';
 import type { DB } from './db';
 import { registerAuth } from './auth';
 import { registerWishlist } from './wishlist';
+import { registerNotif } from './notif';
 
 const SESSION_SECRET = process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 32
   ? process.env.SESSION_SECRET
@@ -24,5 +25,6 @@ export async function buildApp(db: DB): Promise<FastifyInstance> {
   app.get('/health', async () => ({ ok: true }));
   registerAuth(app, db);
   registerWishlist(app, db);
+  registerNotif(app, db);
   return app;
 }

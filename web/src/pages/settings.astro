@@ -32,7 +32,46 @@ import Base from '../layouts/Base.astro';
         <button class="seg-btn" type="button" role="radio" aria-checked="false" data-view-choice="card" data-i18n="viewCard">卡片</button>
       </div>
     </div>
-    <p class="muted small" data-i18n="notifyPrefsSoon" style="margin-top:20px">通知偏好(即將推出)</p>
+    <p class="muted small" id="notif-login-hint" data-i18n="notifLoginHint" style="margin-top:20px" hidden>登入 Discord 後可設定通知偏好</p>
+    <div id="notif-section" hidden>
+      <h2 class="set-subhead" data-i18n="notifPrefsTitle">通知偏好</h2>
+      <div class="set-row">
+        <span class="set-label" id="ndrop-lbl" data-i18n="notifDropLabel">降價通知</span>
+        <div class="seg" id="notif-drop-seg" role="radiogroup" aria-labelledby="ndrop-lbl">
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-drop-choice="on" data-i18n="onLabel">開</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-drop-choice="off" data-i18n="offLabel">關</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label" id="nfree-lbl" data-i18n="notifFreeLabel">免費遊戲通知</span>
+        <div class="seg" id="notif-free-seg" role="radiogroup" aria-labelledby="nfree-lbl">
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-free-choice="on" data-i18n="onLabel">開</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-free-choice="off" data-i18n="offLabel">關</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label" id="ndigest-lbl" data-i18n="notifDigestLabel">特價摘要訂閱</span>
+        <div class="seg" id="notif-digest-seg" role="radiogroup" aria-labelledby="ndigest-lbl">
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-digest-choice="0" data-i18n="digestOff">關閉</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-digest-choice="24" data-i18n="digestDaily">每日</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-digest-choice="168" data-i18n="digestWeekly">每週</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label" id="ndeliv-lbl" data-i18n="notifDeliveryLabel">通知方式</span>
+        <div class="seg" id="notif-delivery-seg" role="radiogroup" aria-labelledby="ndeliv-lbl">
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-delivery-choice="channel" data-i18n="deliveryChannel">頻道 @我</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-delivery-choice="dm" data-i18n="deliveryDm">私訊</button>
+        </div>
+      </div>
+      <div class="set-row set-row-genres">
+        <span class="set-label">
+          <span id="ngenre-lbl" data-i18n="notifGenresLabel">只通知這些類型</span>
+          <span class="muted small" data-i18n="notifGenresHint" style="display:block;font-weight:400">不選=全部類型</span>
+        </span>
+        <div class="genre-multi" id="notif-genres" role="group" aria-labelledby="ngenre-lbl"></div>
+      </div>
+    </div>
   </section>
 
   <script>

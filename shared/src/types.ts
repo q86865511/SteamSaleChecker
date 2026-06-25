@@ -47,3 +47,8 @@ export interface Meta {
   freeCount: number;
   ok: boolean;
 }
+// 通知偏好(per-user;worker 與 api 共用)
+export type NotifDelivery = 'channel' | 'dm';
+export interface NotifPrefs {
+  dropEnabled: boolean; freeEnabled: boolean; digestHours: number; delivery: NotifDelivery; genres: string[];
+}

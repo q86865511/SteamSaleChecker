@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
   giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
   upsertReview, getReview, reviewedAt, markReviewChecked, upsertGame, gamesIndex,
-  replaceGameGenres, getGenresForApp, allGenres, prunePriceHistory } from './db';
+  replaceGameGenres, getGenresForApp, allGenres, prunePriceHistory,
+  getNotifPrefsForUser, usersWantingFree, freeAlreadySent, markFreeSent,
+  usersWantingDigest, lastPersonalDigest, recordPersonalDigest } from './db';
 import type { FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
@@ -102,6 +104,41 @@ describe('game_reviews', () => {
     markReviewChecked(db, 21, 5000);
     expect(getReview(db, 21)?.positivePct).toBe(80);
     expect(reviewedAt(db, 21)).toBe(5000);
+  });
+});
+
+describe('通知偏好 + 個人通知狀態', () => {
+  it('getNotifPrefsForUser 無列回預設;設定後讀回', () => {
+    const db = openDb(':memory:');
+    expect(getNotifPrefsForUser(db, 1)).toEqual({ dropEnabled: true, freeEnabled: false, digestHours: 0, delivery: 'channel', genres: [] });
+    db.prepare("INSERT INTO notif_prefs(user_id,drop_enabled,free_enabled,digest_hours,delivery) VALUES(1,0,1,24,'dm')").run();
+    db.prepare("INSERT INTO notif_genres(user_id,genre) VALUES(1,'動作')").run();
+    expect(getNotifPrefsForUser(db, 1)).toEqual({ dropEnabled: false, freeEnabled: true, digestHours: 24, delivery: 'dm', genres: ['動作'] });
+  });
+  it('usersWantingFree 只回 free_enabled=1 且有 discord_id', () => {
+    const db = openDb(':memory:');
+    db.prepare("INSERT INTO users(id,discord_id,username) VALUES(1,'d1','A'),(2,'d2','B'),(3,NULL,'C')").run();
+    db.prepare("INSERT INTO notif_prefs(user_id,free_enabled,delivery) VALUES(1,1,'dm'),(2,0,'channel'),(3,1,'channel')").run();
+    expect(usersWantingFree(db).map(r => r.userId)).toEqual([1]);
+    expect(usersWantingFree(db)[0]).toMatchObject({ discordId: 'd1', delivery: 'dm' });
+  });
+  it('個人免費去重:markFreeSent 後 freeAlreadySent 為真', () => {
+    const db = openDb(':memory:');
+    expect(freeAlreadySent(db, 1, 'g1')).toBe(false);
+    markFreeSent(db, 1, 'g1', 1000);
+    expect(freeAlreadySent(db, 1, 'g1')).toBe(true);
+    expect(freeAlreadySent(db, 1, 'g2')).toBe(false);
+  });
+  it('usersWantingDigest 只回 digest_hours>0;digest gate 讀寫', () => {
+    const db = openDb(':memory:');
+    db.prepare("INSERT INTO users(id,discord_id,username) VALUES(1,'d1','A'),(2,'d2','B')").run();
+    db.prepare("INSERT INTO notif_prefs(user_id,digest_hours,delivery) VALUES(1,168,'dm'),(2,0,'channel')").run();
+    expect(usersWantingDigest(db).map(r => r.userId)).toEqual([1]);
+    expect(lastPersonalDigest(db, 1)).toBeNull();
+    recordPersonalDigest(db, 1, 5000);
+    expect(lastPersonalDigest(db, 1)).toBe(5000);
+    recordPersonalDigest(db, 1, 9000);
+    expect(lastPersonalDigest(db, 1)).toBe(9000);
   });
 });
 

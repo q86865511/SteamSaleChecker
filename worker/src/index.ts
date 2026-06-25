@@ -6,7 +6,8 @@ import { openDb } from './db';
 import { runPipeline } from './pipeline';
 import { collectPending, dispatchNotifications } from './notify';
 import { syncAndNotifyGiveaways } from './giveaways';
-import { maybeSendDigest } from './digest';
+import { collectAndSendPersonalFree } from './free-personal';
+import { maybeSendDigest, maybeSendPersonalDigests } from './digest';
 import { writeJsonAtomic } from './bake';
 import { shouldRefresh, lastSeededAt, seedItadLows } from './seed/itad';
 import type { Meta } from '@ssc/shared';
@@ -39,15 +40,21 @@ const main = async () => {
       const pending = collectPending(db, newLows);
       const sent = await dispatchNotifications(db, pending, botToken, channelId, now);
       console.log(`通知:${sent}/${pending.length} 已送`);
-      // 免費領取通知 + 每日/每週摘要(失敗不影響主流程)
+      // 免費領取通知(全域頻道公告)+ 個人免費通知 + 全域/個人摘要(失敗不影響主流程)
       try {
-        const gsent = await syncAndNotifyGiveaways(db, free, botToken, channelId, now);
-        if (gsent) console.log(`免費領取通知:${gsent} 筆`);
+        const gres = await syncAndNotifyGiveaways(db, free, botToken, channelId, now);
+        if (gres.sent) console.log(`免費領取通知:${gres.sent} 筆`);
+        if (!gres.seeded) {
+          const pfree = await collectAndSendPersonalFree(db, free, gres.newIds, botToken, channelId, now);
+          if (pfree) console.log(`個人免費通知:${pfree} 筆`);
+        }
         const digestHours = Number(envOr(process.env.SSC_DIGEST_HOURS, '0'));
         const digestSec = (Number.isFinite(digestHours) ? digestHours : 0) * 3600;
         if (digestSec > 0 && await maybeSendDigest(db, deals, botToken, channelId, now, digestSec)) {
           console.log('特價摘要:已送出');
         }
+        const pdig = await maybeSendPersonalDigests(db, deals, botToken, channelId, now);
+        if (pdig) console.log(`個人摘要:${pdig} 人`);
       } catch (e) {
         console.warn('免費/摘要通知失敗(不影響主流程):', e instanceof Error ? e.message : e);
       }
