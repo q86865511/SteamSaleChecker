@@ -158,6 +158,9 @@ export function usersWantingFree(db: DB): FreeRecipient[] {
 export function freeAlreadySent(db: DB, userId: number, giveawayId: string): boolean {
   return !!db.prepare('SELECT 1 FROM notif_free_sent WHERE user_id = ? AND giveaway_id = ?').get(userId, giveawayId);
 }
+export function freeSentCount(db: DB, userId: number): number {
+  return (db.prepare('SELECT COUNT(*) AS c FROM notif_free_sent WHERE user_id = ?').get(userId) as { c: number }).c;
+}
 export function markFreeSent(db: DB, userId: number, giveawayId: string, now: number): void {
   db.prepare('INSERT OR IGNORE INTO notif_free_sent(user_id, giveaway_id, notified_at) VALUES(?,?,?)').run(userId, giveawayId, now);
 }

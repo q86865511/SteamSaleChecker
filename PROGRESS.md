@@ -4,6 +4,12 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-26:R5 對抗式 review 修正(commit 於 `feat/steam-import` 末端,跨 PR)**
+  - 7 路多代理對抗式 review(每筆 refute-by-default 驗證)出 9 confirmed;修了 7 項(略過 1 個「私密 vs 空願望單」nit,已有公開提示文案)。
+  - **[bug] 目標價只在創新低時才觸發**(B-5 常見情境失效):史低已低於目標時,之後跌到「≤目標但>史低」永不通知。→ `shouldNotifyNewLow` 加 `isNewLow`:target 看現價(跌破即發,不必新低)、drop 只在新低發;`collectPending` 改吃「所有特價候選」(index.ts 由 deals+newLows 組),新增整合測試。
+  - **[bug] 個人免費通知會永久遺失**:newIds-only feed + 全域 cap 使被略過者下輪不再出現。→ 改 per-user 基線(首見建基線不通知)+ 完整現有 Steam 清單 feed,達上限未送者「不標記→下輪續發」;`giveaways.ts` 還原回傳數;新 `free-personal.test.ts`(stub timers)。
+  - 小修:`extractSteamId64` 錨定(18碼/嵌入/`/id/`17碼 vanity 不再誤判)、`downsampleSpark` n===1 防除零、`parseWishlistAppids` 只收正整數、import 上限 4000 筆 + `AbortSignal.timeout(8000)`。
+  - **164 測試**綠(+10)、四 workspace tsc 乾淨。
 - **2026-06-26:Phase D Steam 願望單匯入(`feat/steam-import`,待 PR;R5 批次第 5 棒,疊在 notif 上)**
   - **spike 確認**:Steam 2024–25 改版後,`store.../wishlistdata` 已不穩;改用 `api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=`(**免金鑰**,回 `response.items[].appid`)。
   - 純函式 TDD:`extractSteamId64`(17 碼或 `/profiles/` 網址;vanity `/id/` 回 null)、`parseWishlistAppids`(放 shared)。

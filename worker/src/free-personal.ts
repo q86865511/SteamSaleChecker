@@ -1,23 +1,28 @@
 import type { DB } from './db';
-import { usersWantingFree, freeAlreadySent, markFreeSent } from './db';
+import { usersWantingFree, freeAlreadySent, markFreeSent, freeSentCount } from './db';
 import { formatPersonalGiveawayMessage, postChannelMessage, sendDm } from './discord-bot';
 import { isSteamGiveaway, type FreeGiveaway } from '@ssc/shared';
 
-// 對 free_enabled 使用者,就「本輪新出現且未個別通知過」的 Steam 免費領取,依其 delivery 個別通知。
-// 只取 newIds(本輪新出現)避免使用者剛開啟就被現有 backlog 轟炸;與既有全域頻道公告並存。
-// 回傳送出筆數。失敗逐筆 try/catch,不標記(下輪重試),不中斷主流程。
+// 對 free_enabled 使用者個別通知 Steam 免費領取,依其 delivery 送。
+// 防轟炸:使用者「首次出現在 notif_free_sent」時建立基線(把當下全部標為已送、不通知),
+//         之後只通知新出現者。防遺失:feed 為「目前完整 Steam 清單」(非 run-scoped),
+//         達上限未送者「不標記」→ 下輪續發(freeAlreadySent 去重)。回傳送出筆數。
 export async function collectAndSendPersonalFree(
-  db: DB, free: FreeGiveaway[], newIds: string[], botToken: string, channelId: string, now: number,
+  db: DB, free: FreeGiveaway[], botToken: string, channelId: string, now: number,
 ): Promise<number> {
-  const newSet = new Set(newIds);
-  const steamNew = free.filter(f => newSet.has(f.id) && isSteamGiveaway(f.platforms.join(',')));
+  const steam = free.filter(f => isSteamGiveaway(f.platforms.join(',')));
   const recipients = usersWantingFree(db);
-  if (steamNew.length === 0 || recipients.length === 0) return 0;
-  const MAX_PER_RUN = 8; // 跨所有收件者的總上限,避免 Discord 速率;其餘下輪續發(freeAlreadySent 去重)
+  if (steam.length === 0 || recipients.length === 0) return 0;
+  const MAX_PER_RUN = 8; // 跨所有收件者的總上限,避免 Discord 速率;未送者下輪續發
   let sent = 0;
   for (const r of recipients) {
-    for (const g of steamNew) {
-      if (sent >= MAX_PER_RUN) return sent;
+    // 首次見到此使用者:建立基線(標記當下全部為已送、不通知),避免剛開啟就被現有清單轟炸
+    if (freeSentCount(db, r.userId) === 0) {
+      for (const g of steam) markFreeSent(db, r.userId, g.id, now);
+      continue;
+    }
+    for (const g of steam) {
+      if (sent >= MAX_PER_RUN) return sent; // 達上限:未送者不標記 → 下輪續發
       if (freeAlreadySent(db, r.userId, g.id)) continue;
       const content = formatPersonalGiveawayMessage(r.discordId, {
         title: g.title, url: g.url, type: g.type, platforms: g.platforms.join(','), end_date: g.endDate, worth_usd: g.worthUsd ?? null,

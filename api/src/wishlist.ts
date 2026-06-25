@@ -68,10 +68,13 @@ export function registerWishlist(app: FastifyInstance, db: DB): void {
     if (!id) return reply.code(400).send({ error: 'bad_steamid' });
     let appids: number[] = [];
     try {
-      const r = await fetch(`https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=${id}`);
+      const r = await fetch(`https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=${id}`,
+        { signal: AbortSignal.timeout(8000) });
       if (!r.ok) return reply.code(502).send({ error: 'steam_fetch_failed' });
       appids = parseWishlistAppids(await r.json());
     } catch { return reply.code(502).send({ error: 'steam_fetch_failed' }); }
+    const MAX_IMPORT = 4000; // 上限保護(真實願望單遠小於此),避免外部資料無上限灌入
+    if (appids.length > MAX_IMPORT) appids = appids.slice(0, MAX_IMPORT);
     if (appids.length) mergeWish(db, u, appids, nowSec());
     return { imported: appids.length, wishlist: listWish(db, u) };
   });

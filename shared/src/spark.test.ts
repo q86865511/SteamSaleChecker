@@ -24,4 +24,8 @@ describe('downsampleSpark', () => {
   it('空陣列回空陣列', () => {
     expect(downsampleSpark([], 5)).toEqual([]);
   });
+  it('n===1 不除以零(回最後一點)', () => {
+    expect(downsampleSpark([10, 20, 30], 1)).toEqual([30]);
+    expect(downsampleSpark([], 1)).toEqual([]);
+  });
 });

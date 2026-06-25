@@ -37,17 +37,19 @@ const main = async () => {
     const botToken = process.env.DISCORD_BOT_TOKEN;
     const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
     if (botToken && channelId) {
-      const pending = collectPending(db, newLows);
+      // 通知候選=所有在特價的遊戲(現價 + 是否本輪創新低);
+      // drop 只在新低時發,target 看現價(跌破即發,不必是新低)。
+      const newLowSet = new Set(newLows.map(n => n.appid));
+      const candidates = deals.map(d => ({ appid: d.appid, name: d.nameZh, lowCents: d.priceCents, isNewLow: newLowSet.has(d.appid) }));
+      const pending = collectPending(db, candidates);
       const sent = await dispatchNotifications(db, pending, botToken, channelId, now);
       console.log(`通知:${sent}/${pending.length} 已送`);
       // 免費領取通知(全域頻道公告)+ 個人免費通知 + 全域/個人摘要(失敗不影響主流程)
       try {
-        const gres = await syncAndNotifyGiveaways(db, free, botToken, channelId, now);
-        if (gres.sent) console.log(`免費領取通知:${gres.sent} 筆`);
-        if (!gres.seeded) {
-          const pfree = await collectAndSendPersonalFree(db, free, gres.newIds, botToken, channelId, now);
-          if (pfree) console.log(`個人免費通知:${pfree} 筆`);
-        }
+        const gsent = await syncAndNotifyGiveaways(db, free, botToken, channelId, now);
+        if (gsent) console.log(`免費領取通知:${gsent} 筆`);
+        const pfree = await collectAndSendPersonalFree(db, free, botToken, channelId, now);
+        if (pfree) console.log(`個人免費通知:${pfree} 筆`);
         const digestHours = Number(envOr(process.env.SSC_DIGEST_HOURS, '0'));
         const digestSec = (Number.isFinite(digestHours) ? digestHours : 0) * 3600;
         if (digestSec > 0 && await maybeSendDigest(db, deals, botToken, channelId, now, digestSec)) {

@@ -3,6 +3,8 @@
 export function downsampleSpark(values: number[], n: number): number[] {
   if (n <= 0) return [];
   if (values.length <= n) return [...values];
+  if (n === 1) return [values[values.length - 1]]; // 避免 (n-1)=0 除零
+
   const out: number[] = [];
   for (let i = 0; i < n; i++) {
     out.push(values[Math.round((i * (values.length - 1)) / (n - 1))]);
