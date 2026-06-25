@@ -133,6 +133,10 @@ function applyI18n(t: Dict): void {
     const k = el.dataset.i18nPh as keyof Dict;
     if (t[k]) (el as HTMLInputElement).placeholder = String(t[k]);
   });
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach(el => {
+    const k = el.dataset.i18nAria as keyof Dict;
+    if (t[k]) el.setAttribute('aria-label', String(t[k]));
+  });
 }
 
 function applyTheme(theme: Theme, t: Dict): void {
@@ -202,7 +206,7 @@ export async function boot(): Promise<void> {
     if (!host) return;
     host.dataset.view = state.viewMode;
     const rows = applyView(allDeals, state);
-    if (rows.length === 0) host.innerHTML = `<div class="empty-state">${esc(t.noResults)}</div>`;
+    if (rows.length === 0) host.innerHTML = `<div class="empty-state" role="status">${esc(t.noResults)}</div>`;
     else if (state.viewMode === 'card') host.innerHTML = `<div class="grid">${rows.map(d => dealCard(d, t, wishSet.has(d.appid))).join('')}</div>`;
     else host.innerHTML = dealTable(rows, t, wishSet);
     updateSortIndicators();
@@ -210,14 +214,15 @@ export async function boot(): Promise<void> {
   function updateViewToggle(): void {
     const btn = document.getElementById('view-toggle');
     if (!btn) return;
+    // 顯示「切換到」的目標檢視;按鈕文字即無障礙名稱(故 index.astro 不設 aria-label/aria-pressed)
     btn.textContent = state.viewMode === 'list' ? t.viewCard : t.viewList;
-    btn.setAttribute('aria-pressed', String(state.viewMode === 'list'));
   }
   function syncSortSelect(): void {
     const sel = document.getElementById('sort-select') as HTMLSelectElement | null;
     if (!sel) return;
     const v = `${state.sortKey}-${state.sortDir}`;
-    if ([...sel.options].some(o => o.value === v)) sel.value = v;
+    const opt = [...sel.options].find(o => o.value === v);
+    sel.selectedIndex = opt ? opt.index : -1; // 無對應選項(如 原價排序)時顯示空白,避免與表格不符
   }
 
   // ending-soon + free render once (unchanged behavior)

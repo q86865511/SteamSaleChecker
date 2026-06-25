@@ -25,15 +25,15 @@ import Base from '../layouts/Base.astro';
       <h2 data-i18n="deals">熱門特價榜</h2>
       <div class="toolbar-controls">
         <input id="deal-search" type="search" class="search-input" data-i18n-ph="searchPlaceholder"
-               placeholder="搜尋遊戲…" autocomplete="off" aria-label="搜尋遊戲" />
+               data-i18n-aria="searchPlaceholder" placeholder="搜尋遊戲…" autocomplete="off" aria-label="搜尋遊戲" />
         <label class="sr-only" for="sort-select" data-i18n="sortLabel">排序</label>
-        <select id="sort-select" class="ctl-select" aria-label="排序方式">
+        <select id="sort-select" class="ctl-select">
           <option value="rank-asc" data-i18n="sortRank">推薦排序</option>
           <option value="discount-desc" data-i18n="sortDiscountDesc">折扣 高→低</option>
           <option value="price-asc" data-i18n="sortPriceAsc">價格 低→高</option>
           <option value="price-desc" data-i18n="sortPriceDesc">價格 高→低</option>
         </select>
-        <button id="view-toggle" class="ctl-btn" type="button" aria-label="切換檢視" aria-pressed="true" data-i18n="viewCard">卡片</button>
+        <button id="view-toggle" class="ctl-btn" type="button" data-i18n="viewCard">卡片</button>
       </div>
     </div>
     <div id="deals-host" data-view="list"></div>
