@@ -4,6 +4,7 @@ export interface Deal {
   appid: number; nameZh: string; headerImage: string; priceCents: number; regularCents: number;
   discountPercent: number; rank: number; discountExpiration?: number;
   observedLowCents: number | null; observedLowAt: number | null; isAtObservedLow: boolean; observedMaxDiscount: number;
+  review?: { scoreDesc: string; positivePct: number; total: number } | null;
 }
 
 export type SortKey = 'rank' | 'discount' | 'price' | 'regular' | 'low';

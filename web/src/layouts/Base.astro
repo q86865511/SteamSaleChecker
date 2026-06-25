@@ -111,7 +111,7 @@
     .deal-table .was{font-size:12px}
     .col-when{color:var(--muted);font-size:12px;white-space:nowrap}
     @media(max-width:680px){
-      .deal-table .col-thumb,.deal-table .col-when,.deal-table .col-regular{display:none}
+      .deal-table .col-thumb,.deal-table .col-when,.deal-table .col-regular,.deal-table .col-review{display:none}
       .deal-table thead th{top:0}
     }
     /* --- settings page --- */
@@ -129,6 +129,8 @@
     /* --- countdown + filter controls --- */
     .countdown{color:var(--low-fg);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px}
     .countdown.ended{color:var(--muted)}
+    .review{font-size:12px;white-space:nowrap}
+    .review.pos{color:var(--price)} .review.mid{color:var(--low-fg)} .review.neg{color:#e06a5a}
     .filter-ctl{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
     .filter-ctl input[type=number]{width:84px;background:var(--ctl-bg);color:var(--ctl-text);
       border:1px solid var(--ctl-border);border-radius:8px;padding:6px 8px;font-size:13px}

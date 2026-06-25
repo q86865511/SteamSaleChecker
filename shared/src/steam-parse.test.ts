@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAppDetails, parseFeaturedItem } from './steam-parse';
+import { parseAppDetails, parseFeaturedItem, parseReviewSummary } from './steam-parse';
 describe('steam-parse', () => {
   it('parseAppDetails:有價格', () => {
     const r = parseAppDetails({
@@ -22,5 +22,19 @@ describe('steam-parse', () => {
     });
     expect(r).toEqual({ appid: 1091500, name: 'Cyberpunk 2077', discountPercent: 70,
       regularCents: 159900, priceCents: 47900, headerImage: 'cap.jpg', discountExpiration: 1750000000 });
+  });
+  it('parseReviewSummary:正評率四捨五入', () => {
+    expect(parseReviewSummary({ success: 1, query_summary: { review_score_desc: '壓倒性好評', total_positive: 950, total_reviews: 1000 } }))
+      .toEqual({ scoreDesc: '壓倒性好評', positivePct: 95, total: 1000 });
+  });
+  it('parseReviewSummary:success 非 1 回 null', () => {
+    expect(parseReviewSummary({ success: 0 })).toBeNull();
+  });
+  it('parseReviewSummary:缺 query_summary 回 null', () => {
+    expect(parseReviewSummary({ success: 1 })).toBeNull();
+  });
+  it('parseReviewSummary:0 則評論不除以零', () => {
+    expect(parseReviewSummary({ success: 1, query_summary: { review_score_desc: '無評論', total_positive: 0, total_reviews: 0 } }))
+      .toEqual({ scoreDesc: '無評論', positivePct: 0, total: 0 });
   });
 });

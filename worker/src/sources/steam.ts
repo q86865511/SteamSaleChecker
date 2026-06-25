@@ -1,4 +1,4 @@
-import { parseFeaturedItem, parseAppDetails, type ParsedFeatured, type ParsedApp } from '@ssc/shared';
+import { parseFeaturedItem, parseAppDetails, parseReviewSummary, type ParsedFeatured, type ParsedApp, type ReviewSummary } from '@ssc/shared';
 const UA = 'SteamSaleChecker/0.1 (+personal portfolio site)';
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 async function getJson(url: string): Promise<any> {
@@ -27,6 +27,13 @@ export async function enrichMany(appids: number[]): Promise<Map<number, ParsedAp
     await sleep(1100);
   }
   return out;
+}
+
+// Steam 評論摘要(appreviews);失敗回 null。
+export async function fetchReviewSummary(appid: number): Promise<ReviewSummary | null> {
+  const url = `https://store.steampowered.com/appreviews/${appid}?json=1&language=all&purchase_type=all&num_per_page=0&l=tchinese`;
+  try { return parseReviewSummary(await getJson(url)); }
+  catch { return null; }
 }
 
 export async function fetchTopSellerSpecialAppids(limit = 120): Promise<number[]> {

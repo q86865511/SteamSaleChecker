@@ -23,6 +23,13 @@ function getViewMode(): ViewMode {
   return localStorage.getItem('ssc-view') === 'card' ? 'card' : 'list';
 }
 
+function reviewCell(d: Deal): string {
+  const r = d.review;
+  if (!r || !r.total) return '';
+  const cls = r.positivePct >= 70 ? ' pos' : (r.positivePct >= 40 ? ' mid' : ' neg');
+  return `<span class="review${cls}" title="${esc(r.scoreDesc)} · ${r.total.toLocaleString('en-US')}">👍${r.positivePct}%</span>`;
+}
+
 function dealCard(d: Deal, t: Dict, wished: boolean): string {
   const diff = d.observedLowCents != null ? d.priceCents - d.observedLowCents : null;
   const low = d.isAtObservedLow
@@ -41,6 +48,7 @@ function dealCard(d: Deal, t: Dict, wished: boolean): string {
         <span class="badge badge-disc">-${d.discountPercent}%</span>
         <span class="price">${twd(d.priceCents)}</span>
         <span class="was">${twd(d.regularCents)}</span>
+        ${reviewCell(d)}
       </div>
       <div class="row">${low}${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" style="margin-left:auto" aria-hidden="true"></span>` : ''}</div>
     </div>
@@ -57,6 +65,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <th class="col-status">${esc(t.colStatus)}</th>
       <th class="col-when">${esc(t.colLowDate)}</th>
       <th class="col-when">${esc(t.colEndsIn)}</th>
+      <th class="col-review">${esc(t.colReview)}</th>
       <th class="col-star"></th>
     </tr></thead>`;
   const body = rows.map(d => {
@@ -71,6 +80,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <td class="col-status">${status}</td>
       <td class="col-when">${esc(fmtLowDate(d.observedLowAt))}</td>
       <td class="col-when">${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" aria-hidden="true"></span>` : ''}</td>
+      <td class="col-review">${reviewCell(d)}</td>
       <td class="col-star"><button class="wish-btn${wished ? ' on' : ''}" data-appid="${d.appid}" aria-label="${esc(t.wishlist)}" aria-pressed="${wished}">★</button></td>
     </tr>`;
   }).join('');

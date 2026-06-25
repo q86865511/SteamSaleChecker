@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { evaluateLow, type FreeGiveaway } from '@ssc/shared';
+import { evaluateLow, type FreeGiveaway, type ReviewSummary } from '@ssc/shared';
 export type DB = Database.Database;
 export function openDb(path: string): DB {
   const db = new Database(path);
@@ -28,6 +28,8 @@ export function openDb(path: string): DB {
       PRIMARY KEY(user_id, appid));
     CREATE TABLE IF NOT EXISTS report_gates(
       report_type TEXT PRIMARY KEY, last_sent_at INTEGER);
+    CREATE TABLE IF NOT EXISTS game_reviews(
+      appid INTEGER PRIMARY KEY, score_desc TEXT, positive_pct INTEGER, total INTEGER, reviewed_at INTEGER);
   `);
   // 遷移:早期 free_giveaways 無 first_seen/notified/notified_at(SQLite 無 ADD COLUMN IF NOT EXISTS)
   addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
@@ -124,4 +126,26 @@ export function lastReportSent(db: DB, type: string): number | null {
 export function recordReportSent(db: DB, type: string, now: number): void {
   db.prepare('INSERT INTO report_gates(report_type,last_sent_at) VALUES(?,?) ON CONFLICT(report_type) DO UPDATE SET last_sent_at=?')
     .run(type, now, now);
+}
+
+// --- 遊戲評價(Steam appreviews 摘要)---
+export function getReview(db: DB, appid: number): ReviewSummary | undefined {
+  // total IS NOT NULL 排除「負快取」列(抓取失敗只記了 reviewed_at)
+  return db.prepare('SELECT score_desc AS scoreDesc, positive_pct AS positivePct, total FROM game_reviews WHERE appid=? AND total IS NOT NULL')
+    .get(appid) as ReviewSummary | undefined;
+}
+export function reviewedAt(db: DB, appid: number): number | null {
+  const r = db.prepare('SELECT reviewed_at AS t FROM game_reviews WHERE appid=?').get(appid) as { t: number } | undefined;
+  return r?.t ?? null;
+}
+// 抓取失敗的負快取:只記 reviewed_at(保留既有評價),避免每輪重抓佔用刷新額度。
+export function markReviewChecked(db: DB, appid: number, now: number): void {
+  db.prepare('INSERT INTO game_reviews(appid, reviewed_at) VALUES(?, ?) ON CONFLICT(appid) DO UPDATE SET reviewed_at=?')
+    .run(appid, now, now);
+}
+export function upsertReview(db: DB, appid: number, rev: ReviewSummary, now: number): void {
+  db.prepare(`INSERT INTO game_reviews(appid,score_desc,positive_pct,total,reviewed_at)
+    VALUES(@a,@d,@p,@t,@now)
+    ON CONFLICT(appid) DO UPDATE SET score_desc=@d, positive_pct=@p, total=@t, reviewed_at=@now`)
+    .run({ a: appid, d: rev.scoreDesc, p: rev.positivePct, t: rev.total, now });
 }
