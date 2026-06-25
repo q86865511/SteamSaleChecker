@@ -1,10 +1,18 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-公開站(含價格圖、About)已在 GitHub `main`。**Discord 帳號 + 願望清單**(分支 `feat/discord-wishlist`)程式已完成、本機整合驗證通過(API `/health`、`/api/me` 401、OAuth 重導帶 client_id+CSRF state、CORS、未登入 localStorage 收藏),只剩**使用者跑一次真實 Discord 登入**驗證 + 開 PR。
+公開站 + Discord 帳號/願望清單已在 GitHub `main`。**Discord 降價通知**(Plan 3,分支 `feat/discord-notify`)程式已完成、35 測試綠、無設定時優雅略過;只剩**使用者提供 bot token + guild/channel id 後做一次真實通知測試** + 開 PR。
 
 ## 已完成
-- **2026-06-25:Discord 帳號 + 願望清單(Plan 2,分支 `feat/discord-wishlist`,待 PR)**
+- **2026-06-25:Discord 降價通知(Plan 3,分支 `feat/discord-notify`,待 PR)**
+  - worker db 加 `notifications` 表 + `getWishersForApp`/`alreadyNotified`/`markNotified`(TDD)。
+  - `discord-bot.ts`:`formatNotifyMessage`(TDD)+ `postChannelMessage`(REST,`allowed_mentions` 只 parse users)。
+  - `notify.ts`:`collectPending`(找收藏者、去重)+ `dispatchNotifications`(成功才標記、失敗下次重試)。
+  - pipeline 只蒐集「跌破先前已記錄最低」的 meaningful new low(排除首次觀測,避免首日洗頻)。
+  - worker 載入 `api/.env`,有 `DISCORD_BOT_TOKEN`+`DISCORD_NOTIFY_CHANNEL_ID` 才發、否則略過;空字串 env 穩健回退。
+  - api 登入加 `guilds.join` scope + `addGuildMember`(非致命,自動把人加進伺服器)。
+  - 35 測試綠;待使用者填 bot token / guild id / channel id 做真實通知測試。
+- **2026-06-25:Discord 帳號 + 願望清單(Plan 2,PR #2 已 merge)**
   - 新 `api/` workspace(Fastify + @fastify/secure-session + cors + better-sqlite3),共用 `data/steam.db` 新增 `users`/`wishlist` 表。
   - 路由:`/health`、`/api/me`、`/api/wishlist` GET/POST/DELETE/merge(需登入,401 守門)、`/auth/discord`、`/auth/callback`(CSRF state)、`/auth/logout`;`upsertUser`。
   - 前端:Discord 登入/登出鈕、卡片 ★ 收藏(未登入 localStorage、登入打 API、登入時合併 localStorage)。
@@ -28,7 +36,6 @@
 - (無)
 
 ## 待辦
-- **Plan 3:Discord 降價通知**(bot 專區頻道 @提醒、`notifications` 防重複、`guilds.join`)。
 - **Plan 4:部署**(systemd worker timer + API service、nginx 反代、子站路徑、履歷連結)。
 - 一次性 ITAD 史低 seed:腳本已備(`worker/src/seed/itad-seed.ts`),上線前手動跑;需先實測 `country=TW` 是否回台幣(需使用者提供 ITAD key)。
 

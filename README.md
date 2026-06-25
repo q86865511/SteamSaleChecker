@@ -9,7 +9,7 @@
 - **即將結束**:48 小時內結束的特價另成一區。
 - **免費領取**:跨平台「領了就永久擁有」的免費遊戲/DLC(GamerPower),附領取期限與 giveaway 價值。
 - **價格走勢圖**:點任一特價卡,看該遊戲「本站追蹤以來」的價格歷史(uPlot;資料隨時間累積)。
-- **願望清單 + Discord 登入**:用 Discord 登入收藏遊戲、跨裝置同步;未登入用 localStorage、登入後合併(降價通知為 Plan 3)。
+- **願望清單 + Discord 登入 + 降價通知**:用 Discord 登入收藏遊戲、跨裝置同步(未登入用 localStorage、登入後合併);收藏的遊戲創本站新低時,bot 在你的 Discord 專區頻道 @你提醒。
 - 繁中/英 i18n、深色主題、資料新鮮度標示、About 技術說明段、來源歸屬。
 
 ## 架構
@@ -54,6 +54,8 @@ npm test                         # vitest(shared / worker / api)
 
 ### Discord 帳號(api)
 複製 `api/.env.example` 為 `api/.env` 並填:`DISCORD_CLIENT_ID`、`DISCORD_CLIENT_SECRET`(Discord Developer Portal 取得)、`SESSION_SECRET`(≥32 字隨機字串)。Discord 應用的 OAuth2 → Redirects 需加 `http://localhost:8787/auth/callback`(上線再加正式網域)。`api/.env` 已被 gitignore,**切勿提交**。
+
+**降價通知(Plan 3)**:`api/.env` 另填 `DISCORD_BOT_TOKEN`(Bot 分頁)、`DISCORD_GUILD_ID`、`DISCORD_NOTIFY_CHANNEL_ID`。Bot 以 `bot` scope + 權限 **View Channels / Send Messages / Create Instant Invite**(整數 3073)邀進你的伺服器,無需 privileged intents。worker 會載入 `api/.env`,抓取後對「收藏且創本站新低」的遊戲在頻道 @ 提醒(未設定則略過);登入時以 `guilds.join` 自動把使用者加進伺服器。
 
 ## 資料來源與歸屬
 - **Steam 商店端點**(`featuredcategories` / `appdetails` / 特價搜尋,免金鑰,台灣區 `cc=tw`):特價清單、台幣價、封面圖、熱銷排序。
