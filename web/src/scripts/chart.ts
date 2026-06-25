@@ -1,9 +1,14 @@
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
+import type { ChartPalette } from './view';
 
 export interface PricePoint { t: number; price: number; }
 
-export function renderPriceChart(el: HTMLElement, points: PricePoint[], lowCents: number | null, emptyMsg: string): void {
+const FALLBACK: ChartPalette = { line: '#66c0f4', low: '#f0b95a', axis: '#6d7e8f', grid: '#2a3f5a' };
+
+export function renderPriceChart(
+  el: HTMLElement, points: PricePoint[], lowCents: number | null, emptyMsg: string, pal: ChartPalette = FALLBACK,
+): void {
   el.innerHTML = '';
   if (!points || points.length < 2) {
     const p = document.createElement('p');
@@ -20,11 +25,12 @@ export function renderPriceChart(el: HTMLElement, points: PricePoint[], lowCents
     : [xs, ys];
   const series: uPlot.Series[] = [
     {},
-    { label: 'NT$', stroke: '#66c0f4', width: 2, points: { show: true, size: 5 } },
+    { label: 'NT$', stroke: pal.line, width: 2, points: { show: true, size: 5 } },
   ];
   if (lowCents != null) {
-    series.push({ label: 'low', stroke: '#f0b95a', width: 1, dash: [4, 4], points: { show: false } });
+    series.push({ label: 'low', stroke: pal.low, width: 1, dash: [4, 4], points: { show: false } });
   }
+  const axis = { stroke: pal.axis, grid: { stroke: pal.grid, width: 1 }, ticks: { stroke: pal.grid } };
   const opts: uPlot.Options = {
     width: el.clientWidth || 560,
     height: 220,
@@ -33,15 +39,11 @@ export function renderPriceChart(el: HTMLElement, points: PricePoint[], lowCents
     series,
     axes: [
       {
-        stroke: '#6d7e8f',
-        grid: { stroke: '#2a3f5a', width: 1 },
-        ticks: { stroke: '#2a3f5a' },
+        ...axis,
         values: (_u, vals) => vals.map(v => new Date(v * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })),
       },
       {
-        stroke: '#6d7e8f',
-        grid: { stroke: '#2a3f5a', width: 1 },
-        ticks: { stroke: '#2a3f5a' },
+        ...axis,
         values: (_u, vals) => vals.map(v => 'NT$' + Math.round(v)),
       },
     ],

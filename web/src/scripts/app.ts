@@ -1,14 +1,13 @@
 import { twd, minutesAgo } from './format';
-import { renderPriceChart } from './chart';
+import { renderPriceChart, type PricePoint } from './chart';
+import {
+  applyView, resolveTheme, nextSortDir, fmtLowDate, readChartPalette,
+  type Deal, type ViewState, type SortKey, type SortDir, type ViewMode, type Theme, type ChartPalette,
+} from './view';
 import { getMe, loadWishlist, addWish, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
 import zhTW from '../i18n/zh-TW.json';
 import en from '../i18n/en.json';
 
-interface Deal {
-  appid: number; nameZh: string; headerImage: string; priceCents: number; regularCents: number;
-  discountPercent: number; rank: number; discountExpiration?: number;
-  observedLowCents: number | null; observedLowAt: number | null; isAtObservedLow: boolean; observedMaxDiscount: number;
-}
 interface FreeGiveaway {
   id: string; title: string; image: string; platforms: string[]; endDate: string | null; url: string; type: string; worthUsd?: string;
 }
@@ -26,6 +25,10 @@ function esc(s: string): string {
 function safeUrl(u: string): string {
   return /^https?:\/\//i.test(u) ? u : '#';
 }
+function getViewMode(): ViewMode {
+  return localStorage.getItem('ssc-view') === 'card' ? 'card' : 'list';
+}
+
 function dealCard(d: Deal, t: Dict, wished: boolean): string {
   const diff = d.observedLowCents != null ? d.priceCents - d.observedLowCents : null;
   const low = d.isAtObservedLow
@@ -49,6 +52,35 @@ function dealCard(d: Deal, t: Dict, wished: boolean): string {
     </div>
   </article>`;
 }
+
+function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
+  const head = `<thead><tr>
+      <th class="col-thumb"></th>
+      <th class="col-name">${esc(t.colGame)}</th>
+      <th class="col-num col-discount" aria-sort="none"><button class="col-sort" data-sort="discount">${esc(t.colDiscount)}</button></th>
+      <th class="col-num col-price" aria-sort="none"><button class="col-sort" data-sort="price">${esc(t.colPrice)}</button></th>
+      <th class="col-num col-regular" aria-sort="none"><button class="col-sort" data-sort="regular">${esc(t.colWas)}</button></th>
+      <th class="col-status">${esc(t.colStatus)}</th>
+      <th class="col-when">${esc(t.colLowDate)}</th>
+      <th class="col-star"></th>
+    </tr></thead>`;
+  const body = rows.map(d => {
+    const wished = wishSet.has(d.appid);
+    const status = d.isAtObservedLow ? `<span class="badge badge-low">${esc(t.atLow)}</span>` : '';
+    return `<tr class="deal-row" data-appid="${d.appid}" data-title="${esc(d.nameZh)}" data-low="${d.observedLowCents ?? ''}">
+      <td class="col-thumb"><img class="row-thumb" src="${esc(d.headerImage)}" alt="" loading="lazy" /></td>
+      <td class="col-name"><span class="row-name">${esc(d.nameZh)}</span></td>
+      <td class="col-num"><span class="badge badge-disc">-${d.discountPercent}%</span></td>
+      <td class="col-num price">${twd(d.priceCents)}</td>
+      <td class="col-num was">${twd(d.regularCents)}</td>
+      <td class="col-status">${status}</td>
+      <td class="col-when">${esc(fmtLowDate(d.observedLowAt))}</td>
+      <td class="col-star"><button class="wish-btn${wished ? ' on' : ''}" data-appid="${d.appid}" aria-label="${esc(t.wishlist)}" aria-pressed="${wished}">★</button></td>
+    </tr>`;
+  }).join('');
+  return `<table class="deal-table">${head}<tbody>${body}</tbody></table>`;
+}
+
 function freeCard(f: FreeGiveaway, t: Dict): string {
   const plats = f.platforms.slice(0, 3).map(p => `<span class="pill">${esc(p)}</span>`).join('');
   const end = f.endDate
@@ -63,6 +95,17 @@ function freeCard(f: FreeGiveaway, t: Dict): string {
     </div>
   </article>`;
 }
+
+function currentPalette(): ChartPalette {
+  const cs = getComputedStyle(document.documentElement);
+  return readChartPalette(n => cs.getPropertyValue(n).trim());
+}
+
+let lastChart: { points: PricePoint[]; low: number | null } | null = null;
+function chartOpen(): boolean {
+  const o = document.getElementById('chart-modal');
+  return !!o && !o.hidden;
+}
 function openChart(appid: number, title: string, lowCents: number | null, emptyMsg: string): void {
   const overlay = document.getElementById('chart-modal');
   const body = document.getElementById('chart-body');
@@ -73,32 +116,55 @@ function openChart(appid: number, title: string, lowCents: number | null, emptyM
   overlay.hidden = false;
   fetch(`/data/history/${appid}.json`)
     .then(r => (r.ok ? r.json() : []))
-    .then((pts) => renderPriceChart(body, pts, lowCents, emptyMsg))
+    .then((pts: PricePoint[]) => { lastChart = { points: pts, low: lowCents }; renderPriceChart(body, pts, lowCents, emptyMsg, currentPalette()); })
     .catch(() => { body.textContent = '—'; });
 }
 function closeChart(): void {
   const overlay = document.getElementById('chart-modal');
   if (overlay) overlay.hidden = true;
 }
+
 function applyI18n(t: Dict): void {
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => {
     const k = el.dataset.i18n as keyof Dict;
     if (t[k]) el.textContent = String(t[k]);
   });
+  document.querySelectorAll<HTMLElement>('[data-i18n-ph]').forEach(el => {
+    const k = el.dataset.i18nPh as keyof Dict;
+    if (t[k]) (el as HTMLInputElement).placeholder = String(t[k]);
+  });
 }
+
+function applyTheme(theme: Theme, t: Dict): void {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) { btn.textContent = theme === 'light' ? '☀️' : '🌙'; btn.setAttribute('aria-label', t.themeToggle); }
+}
+
 export async function boot(): Promise<void> {
   const lang = getLang();
   const t = DICTS[lang];
   document.documentElement.lang = lang;
   applyI18n(t);
-  const toggle = document.getElementById('lang-toggle');
-  if (toggle) {
-    toggle.textContent = t.langName;
-    toggle.addEventListener('click', () => {
+
+  applyTheme(resolveTheme(localStorage.getItem('ssc-theme'), window.matchMedia('(prefers-color-scheme: dark)').matches), t);
+
+  const langToggle = document.getElementById('lang-toggle');
+  if (langToggle) {
+    langToggle.textContent = t.langName;
+    langToggle.addEventListener('click', () => {
       localStorage.setItem('ssc-lang', lang === 'zh-TW' ? 'en' : 'zh-TW');
       location.reload();
     });
   }
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
+    const next: Theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    applyTheme(next, t);
+    localStorage.setItem('ssc-theme', next);
+    const body = document.getElementById('chart-body');
+    if (lastChart && chartOpen() && body) renderPriceChart(body, lastChart.points, lastChart.low, t.chartEmpty, currentPalette());
+  });
+
   let deals: Deal[] = [], free: FreeGiveaway[] = [], meta: Meta | null = null;
   try {
     [deals, free, meta] = await Promise.all([
@@ -107,6 +173,7 @@ export async function boot(): Promise<void> {
       fetch('/data/meta.json').then(r => r.json()),
     ]);
   } catch (e) { console.error('load failed', e); }
+
   const me: Me | null = await getMe();
   const loggedIn = !!me;
   if (loggedIn && getLocal().length) await mergeLocalOnLogin();
@@ -120,9 +187,41 @@ export async function boot(): Promise<void> {
       authEl.innerHTML = `<a class="lang-btn" href="${discordLoginUrl()}">${t.login}</a>`;
     }
   }
+
+  const allDeals: Deal[] = deals;
+  const state: ViewState = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: getViewMode() };
+
+  function updateSortIndicators(): void {
+    document.querySelectorAll<HTMLElement>('.deal-table th[aria-sort]').forEach(th => {
+      const key = th.querySelector<HTMLButtonElement>('.col-sort')?.dataset.sort;
+      th.setAttribute('aria-sort', key === state.sortKey ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    });
+  }
+  function render(): void {
+    const host = document.getElementById('deals-host');
+    if (!host) return;
+    host.dataset.view = state.viewMode;
+    const rows = applyView(allDeals, state);
+    if (rows.length === 0) host.innerHTML = `<div class="empty-state">${esc(t.noResults)}</div>`;
+    else if (state.viewMode === 'card') host.innerHTML = `<div class="grid">${rows.map(d => dealCard(d, t, wishSet.has(d.appid))).join('')}</div>`;
+    else host.innerHTML = dealTable(rows, t, wishSet);
+    updateSortIndicators();
+  }
+  function updateViewToggle(): void {
+    const btn = document.getElementById('view-toggle');
+    if (!btn) return;
+    btn.textContent = state.viewMode === 'list' ? t.viewCard : t.viewList;
+    btn.setAttribute('aria-pressed', String(state.viewMode === 'list'));
+  }
+  function syncSortSelect(): void {
+    const sel = document.getElementById('sort-select') as HTMLSelectElement | null;
+    if (!sel) return;
+    const v = `${state.sortKey}-${state.sortDir}`;
+    if ([...sel.options].some(o => o.value === v)) sel.value = v;
+  }
+
+  // ending-soon + free render once (unchanged behavior)
   const now = Date.now();
-  const dealsEl = document.getElementById('deals');
-  if (dealsEl) dealsEl.innerHTML = deals.map(d => dealCard(d, t, wishSet.has(d.appid))).join('');
   const ending = deals.filter(d => d.discountExpiration
     && d.discountExpiration - now / 1000 < 48 * 3600 && d.discountExpiration - now / 1000 > 0);
   const endSec = document.getElementById('ending-soon-sec');
@@ -133,32 +232,67 @@ export async function boot(): Promise<void> {
   }
   const freeEl = document.getElementById('free');
   if (freeEl) freeEl.innerHTML = free.map(f => freeCard(f, t)).join('');
-  const onCardClick = async (e: Event) => {
+
+  render();
+  updateViewToggle();
+
+  const onItemClick = async (e: Event) => {
     const target = e.target as HTMLElement;
+    const sortBtn = target.closest<HTMLButtonElement>('.col-sort');
+    if (sortBtn) {
+      const key = sortBtn.dataset.sort as SortKey;
+      state.sortDir = nextSortDir(state.sortKey, key, state.sortDir);
+      state.sortKey = key;
+      syncSortSelect();
+      render();
+      return;
+    }
     const wishBtn = target.closest<HTMLButtonElement>('.wish-btn');
     if (wishBtn) {
       e.stopPropagation();
       const appid = Number(wishBtn.dataset.appid);
       const nowOn = !(wishBtn.getAttribute('aria-pressed') === 'true');
       try {
-        if (nowOn) await addWish(appid, loggedIn); else await removeWish(appid, loggedIn);
-        wishBtn.classList.toggle('on', nowOn);
-        wishBtn.setAttribute('aria-pressed', String(nowOn));
+        if (nowOn) { await addWish(appid, loggedIn); wishSet.add(appid); }
+        else { await removeWish(appid, loggedIn); wishSet.delete(appid); }
+        // 同步該遊戲的所有 ★(熱門榜 + 即將結束區、卡片/列表皆涵蓋)
+        document.querySelectorAll<HTMLButtonElement>(`.wish-btn[data-appid="${appid}"]`).forEach(b => {
+          b.classList.toggle('on', nowOn);
+          b.setAttribute('aria-pressed', String(nowOn));
+        });
       } catch { /* ignore network error, keep UI */ }
       return;
     }
-    const card = target.closest<HTMLElement>('.card.clickable');
-    if (!card) return;
-    const lowRaw = card.dataset.low;
-    openChart(Number(card.dataset.appid), card.dataset.title ?? '', lowRaw ? Number(lowRaw) : null, t.chartEmpty);
+    const item = target.closest<HTMLElement>('.card.clickable, tr.deal-row');
+    if (!item) return;
+    const lowRaw = item.dataset.low;
+    openChart(Number(item.dataset.appid), item.dataset.title ?? '', lowRaw ? Number(lowRaw) : null, t.chartEmpty);
   };
-  document.getElementById('deals')?.addEventListener('click', onCardClick);
-  document.getElementById('ending-soon')?.addEventListener('click', onCardClick);
+  document.getElementById('deals-host')?.addEventListener('click', onItemClick);
+  document.getElementById('ending-soon')?.addEventListener('click', onItemClick);
+
+  document.getElementById('deal-search')?.addEventListener('input', (e) => {
+    state.searchQuery = (e.target as HTMLInputElement).value;
+    render(); // 120 筆過濾為亞毫秒,直接重渲染;搜尋框在 toolbar(host 外)故不丟焦點
+  });
+  document.getElementById('sort-select')?.addEventListener('change', (e) => {
+    const [k, d] = (e.target as HTMLSelectElement).value.split('-');
+    state.sortKey = k as SortKey; state.sortDir = d as SortDir;
+    render();
+  });
+  document.getElementById('view-toggle')?.addEventListener('click', () => {
+    state.viewMode = state.viewMode === 'list' ? 'card' : 'list';
+    localStorage.setItem('ssc-view', state.viewMode);
+    updateViewToggle();
+    render();
+  });
+
   document.getElementById('chart-close')?.addEventListener('click', closeChart);
   document.getElementById('chart-modal')?.addEventListener('click', (e) => {
     if (e.target === document.getElementById('chart-modal')) closeChart();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChart(); });
+
   const metaEl = document.getElementById('meta');
   if (metaEl && meta) {
     const mins = minutesAgo(meta.generatedAt, now);

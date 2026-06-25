@@ -20,5 +20,22 @@
   "worth": "Worth",
   "login": "Login with Discord",
   "logout": "Log out",
-  "wishlist": "Wishlist"
+  "wishlist": "Wishlist",
+  "searchPlaceholder": "Search games…",
+  "noResults": "No matching games",
+  "sortLabel": "Sort",
+  "sortRank": "Recommended",
+  "sortDiscountDesc": "Discount high→low",
+  "sortPriceAsc": "Price low→high",
+  "sortPriceDesc": "Price high→low",
+  "viewList": "List",
+  "viewCard": "Cards",
+  "viewToggle": "Toggle view",
+  "themeToggle": "Toggle theme",
+  "colGame": "Game",
+  "colDiscount": "Disc.",
+  "colPrice": "Price",
+  "colWas": "Was",
+  "colStatus": "Status",
+  "colLowDate": "Low date"
 }

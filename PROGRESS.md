@@ -4,6 +4,13 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-25:前端 SteamDB 風格改版(`feat/steamdb-redesign`,待 PR 審查)**
+  - 純邏輯層 `web/src/scripts/view.ts`(filter/sort/applyView/resolveTheme/nextSortDir/fmtLowDate/readChartPalette),**23 TDD 測試**綠;`Deal` 型別移此。
+  - 熱門特價榜改 SteamDB 風**緊湊可排序列表**(縮圖/遊戲/折扣/特價/原價/狀態/史低日期/★)+ sticky toolbar;**卡片⇄列表**切換(localStorage 持久)。
+  - **亮色主題**(`[data-theme=light]` 整套 CSS 變數 + `--heading`,跟隨 prefers-color-scheme),header 切換鈕持久;uPlot 圖表配色隨主題重繪。
+  - **單款搜尋**(對 nameZh 即時過濾、no-results 狀態、重渲染不丟焦點)。
+  - 修正:wish ★ 同步該遊戲所有實例(熱門榜 + 即將結束區)。
+  - 驗證:**75 測試**綠、build 通過、i18n zh/en 同步;Preview 實測搜尋/排序/卡列切換/深淺主題/圖表/收藏/RWD 全通過(此環境 screenshot 工具不可用,改以 snapshot/inspect/eval 驗證)。
 - **2026-06-25:ITAD 史低每日刷新 + 正式站金鑰(`feat/itad-daily`)**
   - 抽出共用模組 `worker/src/seed/itad.ts`(`shouldRefresh` 純函式 + `seedItadLows` 編排),CLI `itad-seed.ts` 改薄包裝;gate 5 測試 + 解析 12 測試綠。
   - worker 每輪結束做 gated 每日刷新(`SSC_ITAD_REFRESH_HOURS` 預設 24h;有 `ITAD_API_KEY` 才跑;失敗不影響主流程;效果下一輪重烤反映)。
@@ -56,7 +63,7 @@
 - (無)
 
 ## 待辦
-- **前端 SteamDB 風格改版(PR2)**:緊湊可排序列表 + 卡片/列表切換 + 亮色主題 + 單款搜尋(見計畫)。
+- (前端 SteamDB 改版已完成,待 PR 審查 merge)
 
 ## 已知問題
 - 「史低」冷啟動:第一次觀測即視為最低。已接 **ITAD 每日刷新校正**(本機已驗證;**正式站於部署後 worker 首輪自動 seed**,之後每日刷新)。文案仍誠實標「追蹤以來最低」。

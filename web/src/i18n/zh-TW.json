@@ -20,5 +20,22 @@
   "worth": "價值",
   "login": "Discord 登入",
   "logout": "登出",
-  "wishlist": "收藏"
+  "wishlist": "收藏",
+  "searchPlaceholder": "搜尋遊戲…",
+  "noResults": "找不到符合的遊戲",
+  "sortLabel": "排序",
+  "sortRank": "推薦排序",
+  "sortDiscountDesc": "折扣 高→低",
+  "sortPriceAsc": "價格 低→高",
+  "sortPriceDesc": "價格 高→低",
+  "viewList": "列表",
+  "viewCard": "卡片",
+  "viewToggle": "切換檢視",
+  "themeToggle": "切換主題",
+  "colGame": "遊戲",
+  "colDiscount": "折扣",
+  "colPrice": "特價",
+  "colWas": "原價",
+  "colStatus": "狀態",
+  "colLowDate": "史低日期"
 }

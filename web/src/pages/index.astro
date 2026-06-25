@@ -10,6 +10,7 @@ import Base from '../layouts/Base.astro';
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <span id="auth-control"></span>
+      <button id="theme-toggle" class="lang-btn" type="button" aria-label="切換主題">🌙</button>
       <button id="lang-toggle" class="lang-btn">EN</button>
     </div>
   </header>
@@ -19,9 +20,23 @@ import Base from '../layouts/Base.astro';
     <div class="grid" id="ending-soon"></div>
   </section>
 
-  <section>
-    <h2 data-i18n="deals">熱門特價榜</h2>
-    <div class="grid" id="deals"></div>
+  <section id="deals-section">
+    <div class="toolbar">
+      <h2 data-i18n="deals">熱門特價榜</h2>
+      <div class="toolbar-controls">
+        <input id="deal-search" type="search" class="search-input" data-i18n-ph="searchPlaceholder"
+               placeholder="搜尋遊戲…" autocomplete="off" aria-label="搜尋遊戲" />
+        <label class="sr-only" for="sort-select" data-i18n="sortLabel">排序</label>
+        <select id="sort-select" class="ctl-select" aria-label="排序方式">
+          <option value="rank-asc" data-i18n="sortRank">推薦排序</option>
+          <option value="discount-desc" data-i18n="sortDiscountDesc">折扣 高→低</option>
+          <option value="price-asc" data-i18n="sortPriceAsc">價格 低→高</option>
+          <option value="price-desc" data-i18n="sortPriceDesc">價格 高→低</option>
+        </select>
+        <button id="view-toggle" class="ctl-btn" type="button" aria-label="切換檢視" aria-pressed="true" data-i18n="viewCard">卡片</button>
+      </div>
+    </div>
+    <div id="deals-host" data-view="list"></div>
   </section>
 
   <section>
