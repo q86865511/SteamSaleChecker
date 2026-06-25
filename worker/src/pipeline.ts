@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import type { DB } from './db';
-import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview } from './db';
+import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked } from './db';
 import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids, fetchReviewSummary } from './sources/steam';
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
@@ -56,14 +56,16 @@ export async function runPipeline(
   }
   deals.sort((x, y) => x.rank - y.rank);
 
-  // 3b. 評價:每輪刷新最多 30 款過期(>24h)者,其餘沿用快取;節流 ~1/s,失敗略過。
-  const REVIEW_TTL = 24 * 3600, MAX_REVIEW_FETCH = 30;
-  let reviewFetched = 0;
+  // 3b. 評價:每輪刷新最多 30 款過期(>24h)者,其餘沿用快取;節流 ~1/s。
+  // 失敗也「負快取」(markReviewChecked)避免每輪重抓佔額度;連續失敗達上限即中止本輪(節流/退避)。
+  const REVIEW_TTL = 24 * 3600, MAX_REVIEW_FETCH = 30, MAX_CONSEC_FAIL = 5;
+  let reviewFetched = 0, consecFail = 0;
   for (const d of deals) {
     const at = reviewedAt(db, d.appid);
-    if ((at == null || nowSec - at > REVIEW_TTL) && reviewFetched < MAX_REVIEW_FETCH) {
+    if ((at == null || nowSec - at > REVIEW_TTL) && reviewFetched < MAX_REVIEW_FETCH && consecFail < MAX_CONSEC_FAIL) {
       const rev = await fetchReviewSummary(d.appid);
-      if (rev) upsertReview(db, d.appid, rev, nowSec);
+      if (rev) { upsertReview(db, d.appid, rev, nowSec); consecFail = 0; }
+      else { markReviewChecked(db, d.appid, nowSec); consecFail++; }
       reviewFetched++;
       await new Promise(r => setTimeout(r, 1100));
     }

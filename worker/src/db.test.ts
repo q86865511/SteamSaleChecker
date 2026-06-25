@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
   giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
-  upsertReview, getReview, reviewedAt } from './db';
+  upsertReview, getReview, reviewedAt, markReviewChecked } from './db';
 import type { FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
@@ -86,5 +86,18 @@ describe('game_reviews', () => {
     upsertReview(db, 10, { scoreDesc: '極度好評', positivePct: 95, total: 800 }, 2000);
     expect(getReview(db, 10)?.positivePct).toBe(95);
     expect(reviewedAt(db, 10)).toBe(2000);
+  });
+  it('markReviewChecked 負快取:reviewedAt 有值但 getReview 仍 undefined', () => {
+    const db = openDb(':memory:');
+    markReviewChecked(db, 20, 1000);
+    expect(reviewedAt(db, 20)).toBe(1000);
+    expect(getReview(db, 20)).toBeUndefined();
+  });
+  it('既有評價後 markReviewChecked 不覆蓋評價,只更新時間', () => {
+    const db = openDb(':memory:');
+    upsertReview(db, 21, { scoreDesc: '好評', positivePct: 80, total: 100 }, 1000);
+    markReviewChecked(db, 21, 5000);
+    expect(getReview(db, 21)?.positivePct).toBe(80);
+    expect(reviewedAt(db, 21)).toBe(5000);
   });
 });

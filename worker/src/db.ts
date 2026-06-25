@@ -130,12 +130,18 @@ export function recordReportSent(db: DB, type: string, now: number): void {
 
 // --- 遊戲評價(Steam appreviews 摘要)---
 export function getReview(db: DB, appid: number): ReviewSummary | undefined {
-  return db.prepare('SELECT score_desc AS scoreDesc, positive_pct AS positivePct, total FROM game_reviews WHERE appid=?')
+  // total IS NOT NULL 排除「負快取」列(抓取失敗只記了 reviewed_at)
+  return db.prepare('SELECT score_desc AS scoreDesc, positive_pct AS positivePct, total FROM game_reviews WHERE appid=? AND total IS NOT NULL')
     .get(appid) as ReviewSummary | undefined;
 }
 export function reviewedAt(db: DB, appid: number): number | null {
   const r = db.prepare('SELECT reviewed_at AS t FROM game_reviews WHERE appid=?').get(appid) as { t: number } | undefined;
   return r?.t ?? null;
+}
+// 抓取失敗的負快取:只記 reviewed_at(保留既有評價),避免每輪重抓佔用刷新額度。
+export function markReviewChecked(db: DB, appid: number, now: number): void {
+  db.prepare('INSERT INTO game_reviews(appid, reviewed_at) VALUES(?, ?) ON CONFLICT(appid) DO UPDATE SET reviewed_at=?')
+    .run(appid, now, now);
 }
 export function upsertReview(db: DB, appid: number, rev: ReviewSummary, now: number): void {
   db.prepare(`INSERT INTO game_reviews(appid,score_desc,positive_pct,total,reviewed_at)
