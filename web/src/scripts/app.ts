@@ -54,7 +54,7 @@ function freeCard(f: FreeGiveaway, t: Dict): string {
     <img class="thumb" src="${esc(f.image)}" alt="" loading="lazy" />
     <div class="card-body">
       <p class="card-title">${esc(f.title)}</p>
-      <div class="row"><span class="badge badge-disc">${t.perpetual}</span>${plats}</div>
+      <div class="row"><span class="badge badge-disc">${t.perpetual}</span>${plats}${f.worthUsd ? `<span class="pill">${t.worth} ${esc(f.worthUsd)}</span>` : ''}</div>
       <div class="row">${end}<a class="claim-btn" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener">${t.claim} ↗</a></div>
     </div>
   </article>`;
@@ -139,4 +139,6 @@ export async function boot(): Promise<void> {
   }
   const ft = document.getElementById('footer-text');
   if (ft) ft.textContent = t.footerText;
+  const ab = document.getElementById('about-body');
+  if (ab) ab.textContent = t.aboutBody;
 }

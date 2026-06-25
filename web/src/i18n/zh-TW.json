@@ -14,5 +14,8 @@
   "noEnd": "無期限",
   "langName": "EN",
   "footerText": "價格資料來自 Steam 商店;免費領取資料",
-  "chartEmpty": "價格歷史累積中,過幾天再回來看 📈"
+  "chartEmpty": "價格歷史累積中,過幾天再回來看 📈",
+  "aboutTitle": "關於這個專案",
+  "aboutBody": "本站不依賴第三方價格 API:後端(Node / TypeScript)定時抓 Steam 官方商店端點,把每次的台幣價寫進 SQLite、自建價格歷史,並算出「本站追蹤以來最低」;免費領取資料來自 GamerPower。前端是 Astro 靜態站,資料以 JSON 快取供應、更新免重新建置。點任一張特價卡可看該遊戲的價格走勢圖。",
+  "worth": "價值"
 }
