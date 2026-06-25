@@ -131,6 +131,18 @@
     .countdown.ended{color:var(--muted)}
     .review{font-size:12px;white-space:nowrap}
     .review.pos{color:var(--price)} .review.mid{color:var(--low-fg)} .review.neg{color:#e06a5a}
+    /* --- 商品詳細頁 --- */
+    .game-detail{margin:8px 0}
+    .gd-head{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;margin-bottom:8px}
+    .gd-cover{width:min(460px,100%);aspect-ratio:460/215;object-fit:cover;border-radius:var(--radius);border:1px solid var(--line)}
+    .gd-info{flex:1;min-width:240px}
+    .gd-info h1{margin:0 0 10px}
+    .gd-info .row{margin-bottom:8px}
+    .gd-chart{max-width:640px}
+    .gd-shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+    .gd-shots img{width:100%;border-radius:6px;border:1px solid var(--line);display:block}
+    .row-name-link,.card-title-link{color:var(--heading);font-weight:500;text-decoration:none}
+    .row-name-link:hover,.card-title-link:hover{color:var(--accent);text-decoration:underline}
     .filter-ctl{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
     .filter-ctl input[type=number]{width:84px;background:var(--ctl-bg);color:var(--ctl-text);
       border:1px solid var(--ctl-border);border-radius:8px;padding:6px 8px;font-size:13px}

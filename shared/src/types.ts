@@ -19,6 +19,14 @@ export interface Deal {
   observedMaxDiscount: number;
   review?: ReviewSummary | null;
 }
+// 商品詳細頁(/game)的 per-appid JSON 形狀
+export interface GameDetail {
+  appid: number; nameZh: string; headerImage: string;
+  priceCents: number; regularCents: number; discountPercent: number; discountExpiration?: number;
+  observedLowCents: number | null; observedLowAt: number | null; isAtObservedLow: boolean;
+  review?: ReviewSummary | null;
+  shortDescription?: string; genres?: string[]; releaseDate?: string; screenshots?: string[];
+}
 export interface FreeGiveaway {
   id: string;
   source: 'gamerpower';

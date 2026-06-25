@@ -1,8 +1,7 @@
 import { twd, minutesAgo } from './format';
-import { renderPriceChart, type PricePoint } from './chart';
 import {
-  applyView, nextSortDir, fmtLowDate, fmtCountdown, readChartPalette, NO_FILTERS,
-  type Deal, type ViewState, type SortKey, type SortDir, type ViewMode, type Theme, type ChartPalette,
+  applyView, nextSortDir, fmtLowDate, fmtCountdown, NO_FILTERS,
+  type Deal, type ViewState, type SortKey, type SortDir, type ViewMode, type Theme,
 } from './view';
 import { getMe, loadWishlist, addWish, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
 import { initTheme, setTheme, storeTheme } from './theme';
@@ -41,7 +40,7 @@ function dealCard(d: Deal, t: Dict, wished: boolean): string {
     <img class="thumb" src="${esc(d.headerImage)}" alt="" loading="lazy" />
     <div class="card-body">
       <div class="title-row">
-        <p class="card-title">${esc(d.nameZh)}</p>
+        <p class="card-title"><a class="card-title-link" href="/game?appid=${d.appid}">${esc(d.nameZh)}</a></p>
         <button class="wish-btn${wished ? ' on' : ''}" data-appid="${d.appid}" aria-label="${t.wishlist}" aria-pressed="${wished}">★</button>
       </div>
       <div class="row">
@@ -73,7 +72,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
     const status = d.isAtObservedLow ? `<span class="badge badge-low">${esc(t.atLow)}</span>` : '';
     return `<tr class="deal-row" data-appid="${d.appid}" data-title="${esc(d.nameZh)}" data-low="${d.observedLowCents ?? ''}">
       <td class="col-thumb"><img class="row-thumb" src="${esc(d.headerImage)}" alt="" loading="lazy" /></td>
-      <td class="col-name"><span class="row-name">${esc(d.nameZh)}</span></td>
+      <td class="col-name"><a class="row-name-link" href="/game?appid=${d.appid}">${esc(d.nameZh)}</a></td>
       <td class="col-num"><span class="badge badge-disc">-${d.discountPercent}%</span></td>
       <td class="col-num price">${twd(d.priceCents)}</td>
       <td class="col-num was">${twd(d.regularCents)}</td>
@@ -102,34 +101,6 @@ function freeCard(f: FreeGiveaway, t: Dict): string {
   </article>`;
 }
 
-function currentPalette(): ChartPalette {
-  const cs = getComputedStyle(document.documentElement);
-  return readChartPalette(n => cs.getPropertyValue(n).trim());
-}
-
-let lastChart: { points: PricePoint[]; low: number | null } | null = null;
-function chartOpen(): boolean {
-  const o = document.getElementById('chart-modal');
-  return !!o && !o.hidden;
-}
-function openChart(appid: number, title: string, lowCents: number | null, emptyMsg: string): void {
-  const overlay = document.getElementById('chart-modal');
-  const body = document.getElementById('chart-body');
-  const titleEl = document.getElementById('chart-title');
-  if (!overlay || !body || !titleEl) return;
-  titleEl.textContent = title;
-  body.innerHTML = '';
-  overlay.hidden = false;
-  fetch(`/data/history/${appid}.json`)
-    .then(r => (r.ok ? r.json() : []))
-    .then((pts: PricePoint[]) => { lastChart = { points: pts, low: lowCents }; renderPriceChart(body, pts, lowCents, emptyMsg, currentPalette()); })
-    .catch(() => { body.textContent = '—'; });
-}
-function closeChart(): void {
-  const overlay = document.getElementById('chart-modal');
-  if (overlay) overlay.hidden = true;
-}
-
 function updateThemeIcon(theme: Theme, t: Dict): void {
   const btn = document.getElementById('theme-toggle');
   if (btn) { btn.textContent = theme === 'light' ? '☀️' : '🌙'; btn.setAttribute('aria-label', t.themeToggle); }
@@ -154,8 +125,6 @@ export async function boot(): Promise<void> {
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const next: Theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     setTheme(next); storeTheme(next); updateThemeIcon(next, t);
-    const body = document.getElementById('chart-body');
-    if (lastChart && chartOpen() && body) renderPriceChart(body, lastChart.points, lastChart.low, t.chartEmpty, currentPalette());
   });
 
   let deals: Deal[] = [], free: FreeGiveaway[] = [], meta: Meta | null = null;
@@ -267,10 +236,10 @@ export async function boot(): Promise<void> {
       } catch { /* ignore network error, keep UI */ }
       return;
     }
+    if (target.closest('a')) return; // 名稱連結自行導航
     const item = target.closest<HTMLElement>('.card.clickable, tr.deal-row');
     if (!item) return;
-    const lowRaw = item.dataset.low;
-    openChart(Number(item.dataset.appid), item.dataset.title ?? '', lowRaw ? Number(lowRaw) : null, t.chartEmpty);
+    location.href = `/game?appid=${Number(item.dataset.appid)}`;
   };
   document.getElementById('deals-host')?.addEventListener('click', onItemClick);
   document.getElementById('ending-soon')?.addEventListener('click', onItemClick);
@@ -303,12 +272,6 @@ export async function boot(): Promise<void> {
     state.filters!.atLowOnly = (e.target as HTMLInputElement).checked;
     render();
   });
-
-  document.getElementById('chart-close')?.addEventListener('click', closeChart);
-  document.getElementById('chart-modal')?.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('chart-modal')) closeChart();
-  });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChart(); });
 
   const metaEl = document.getElementById('meta');
   if (metaEl && meta) {

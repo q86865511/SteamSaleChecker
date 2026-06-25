@@ -6,7 +6,7 @@ import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids, fetchReviewSumm
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
 import { isAtLow } from '@ssc/shared';
-import type { Deal, FreeGiveaway, Meta } from '@ssc/shared';
+import type { Deal, FreeGiveaway, Meta, GameDetail } from '@ssc/shared';
 import type { NewLow } from './notify';
 
 export interface RunResult { deals: Deal[]; free: FreeGiveaway[]; meta: Meta; newLows: NewLow[]; }
@@ -84,6 +84,21 @@ export async function runPipeline(
   mkdirSync(histDir, { recursive: true });
   for (const d of deals) {
     writeJsonAtomic(join(histDir, `${d.appid}.json`), getPriceHistory(db, d.appid));
+  }
+  // 商品詳細頁資料(豐富欄位來自本輪 enriched;沿用 deal 的價格/史低/評價)
+  const detailDir = join(dataDir, 'detail');
+  mkdirSync(detailDir, { recursive: true });
+  for (const d of deals) {
+    const a = enriched.get(d.appid);
+    const detail: GameDetail = {
+      appid: d.appid, nameZh: d.nameZh, headerImage: d.headerImage,
+      priceCents: d.priceCents, regularCents: d.regularCents, discountPercent: d.discountPercent,
+      discountExpiration: d.discountExpiration,
+      observedLowCents: d.observedLowCents, observedLowAt: d.observedLowAt, isAtObservedLow: d.isAtObservedLow,
+      review: d.review ?? null,
+      shortDescription: a?.shortDescription, genres: a?.genres, releaseDate: a?.releaseDate, screenshots: a?.screenshots,
+    };
+    writeJsonAtomic(join(detailDir, `${d.appid}.json`), detail);
   }
   return { deals, free, meta, newLows };
 }
