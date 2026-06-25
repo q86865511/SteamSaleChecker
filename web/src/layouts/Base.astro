@@ -11,13 +11,24 @@
       --bg:#0e1622; --surface:#16202d; --line:#2a3f5a; --text:#c7d5e0; --muted:#6d7e8f;
       --accent:#66c0f4; --price:#beee11; --disc-bg:#4c6b22; --disc-fg:#d2e885;
       --low-bg:#4a3416; --low-fg:#f0b95a; --radius:10px; --maxw:1120px;
+      --heading:#ffffff; --row-hover:#1c2a3a; --row-zebra:#131c28; --thead-bg:#101b27;
+      --toolbar-bg:#0e1622; --ctl-bg:#16202d; --ctl-border:#2a3f5a; --ctl-text:#c7d5e0;
+      color-scheme:dark;
+    }
+    [data-theme="light"]{
+      --bg:#eef1f5; --surface:#ffffff; --line:#d6dde5; --text:#2a3744; --muted:#5b6b7b;
+      --accent:#1a6dc4; --price:#3a7d00; --disc-bg:#d6e8c0; --disc-fg:#2f5212;
+      --low-bg:#fbe7c4; --low-fg:#8a5a12;
+      --heading:#0d1722; --row-hover:#eef3f8; --row-zebra:#f6f8fb; --thead-bg:#e8edf3;
+      --toolbar-bg:#eef1f5; --ctl-bg:#ffffff; --ctl-border:#cfd8e1; --ctl-text:#1b2733;
+      color-scheme:light;
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);
       font-family:system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.6}
     .wrap{max-width:var(--maxw);margin:0 auto;padding:24px 16px 8px}
-    h1{font-size:24px;font-weight:600;color:#fff;margin:0 0 2px}
-    h2{font-size:18px;font-weight:600;color:#fff;margin:28px 0 12px;border-left:3px solid var(--accent);padding-left:10px}
+    h1{font-size:24px;font-weight:600;color:var(--heading);margin:0 0 2px}
+    h2{font-size:18px;font-weight:600;color:var(--heading);margin:28px 0 12px;border-left:3px solid var(--accent);padding-left:10px}
     a{color:var(--accent);text-decoration:none}
     .muted{color:var(--muted)} .small{font-size:12px} p{margin:0}
     .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -26,9 +37,9 @@
     .lang-btn:hover{border-color:var(--accent)}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
     .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-    .thumb{width:100%;display:block;aspect-ratio:460/215;object-fit:cover;background:#0e1622}
+    .thumb{width:100%;display:block;aspect-ratio:460/215;object-fit:cover;background:var(--bg)}
     .card-body{padding:12px 14px}
-    .card-title{color:#fff;font-weight:500;margin:0 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card-title{color:var(--heading);font-weight:500;margin:0 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
     .row:last-child{margin-bottom:0;min-height:20px}
     .badge{font-size:12px;font-weight:500;padding:2px 8px;border-radius:6px;line-height:1.4}
@@ -48,16 +59,53 @@
     .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
       width:min(640px,100%);padding:16px 18px}
     .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .modal-title{color:#fff;font-weight:500;margin:0}
+    .modal-title{color:var(--heading);font-weight:500;margin:0}
     .modal-close{background:transparent;color:var(--muted);border:0;font-size:18px;cursor:pointer;line-height:1}
-    .modal-close:hover{color:#fff}
+    .modal-close:hover{color:var(--heading)}
     .modal-body{min-height:120px}
     .modal-body .uplot{margin:0 auto}
     .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
     .title-row .card-title{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .wish-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0;flex:none}
     .wish-btn.on{color:var(--low-fg)}
-    .wish-btn:hover{color:#fff}
+    .wish-btn:hover{color:var(--heading)}
+    /* --- sticky toolbar --- */
+    .toolbar{position:sticky;top:0;z-index:20;background:var(--toolbar-bg);
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      flex-wrap:wrap;padding:10px 0;margin:28px 0 12px;border-bottom:1px solid var(--line)}
+    .toolbar h2{margin:0;border-left:3px solid var(--accent);padding-left:10px;font-size:18px}
+    .toolbar-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .search-input,.ctl-select,.ctl-btn{background:var(--ctl-bg);color:var(--ctl-text);
+      border:1px solid var(--ctl-border);border-radius:8px;padding:6px 10px;font-size:13px;line-height:1.4}
+    .search-input{min-width:190px}
+    .search-input:focus,.ctl-select:focus,.ctl-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+    .ctl-btn{cursor:pointer}
+    .ctl-btn:hover,.ctl-select:hover{border-color:var(--accent)}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+    .empty-state{padding:48px 12px;text-align:center;color:var(--muted)}
+    /* --- dense list/table (SteamDB-style) --- */
+    .deal-table{width:100%;border-collapse:collapse;font-size:13px}
+    .deal-table thead th{position:sticky;top:51px;background:var(--thead-bg);color:var(--muted);
+      font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+    .deal-table th .col-sort{background:none;border:0;color:inherit;font:inherit;cursor:pointer;
+      padding:0;display:inline-flex;align-items:center;gap:3px}
+    .deal-table th .col-sort:hover{color:var(--text)}
+    .deal-table th[aria-sort="ascending"] .col-sort::after{content:"▲";font-size:9px}
+    .deal-table th[aria-sort="descending"] .col-sort::after{content:"▼";font-size:9px}
+    .deal-table th.col-num,.deal-table td.col-num{text-align:right}
+    .deal-row{cursor:pointer;border-bottom:1px solid var(--line)}
+    .deal-row:nth-child(even){background:var(--row-zebra)}
+    .deal-row:hover{background:var(--row-hover)}
+    .deal-row td{padding:6px 10px;vertical-align:middle}
+    .row-thumb{width:92px;aspect-ratio:460/215;object-fit:cover;border-radius:4px;display:block;background:var(--bg)}
+    .row-name{color:var(--heading);font-weight:500}
+    .deal-table .price{font-size:14px}
+    .deal-table .was{font-size:12px}
+    .col-when{color:var(--muted);font-size:12px;white-space:nowrap}
+    @media(max-width:680px){
+      .deal-table .col-thumb,.deal-table .col-when,.deal-table .col-regular{display:none}
+      .deal-table thead th{top:0}
+    }
   </style>
 </head>
 <body>
