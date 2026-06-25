@@ -13,5 +13,9 @@
   "perpetual": "Keep forever",
   "noEnd": "No deadline",
   "langName": "中",
-  "footerText": "Prices from the Steam store; free-games data"
+  "footerText": "Prices from the Steam store; free-games data",
+  "chartEmpty": "Building price history — check back in a few days 📈",
+  "aboutTitle": "About this project",
+  "aboutBody": "No third-party price API: a Node/TypeScript backend periodically pulls Steam's official store endpoints, records each TWD price into SQLite to build its own price history, and derives a \"lowest since we started tracking\" value; free-game data comes from GamerPower. The frontend is a static Astro site served from cached JSON (no rebuild when data refreshes). Click any deal card to see its price-history chart.",
+  "worth": "Worth"
 }

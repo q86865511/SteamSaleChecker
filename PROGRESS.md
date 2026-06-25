@@ -1,9 +1,15 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-公開站(MVP 第一子系統)已完成並在本機驗證通過:後端排程抓 Steam/GamerPower、自建價格歷史、烤 JSON;前端 Astro 渲染熱門特價榜、即將結束、免費領取,深色主題 + 繁中/英切換。目前在分支 `feat/public-site`,尚未 push / 開 PR。
+公開站已完成並推上 GitHub(`main`,private repo)。加分項分支 `feat/public-site-polish` 再補上**價格走勢圖(uPlot)、About 技術說明段、免費卡價值顯示**,已本機驗證,待開 PR。
 
 ## 已完成
+- **2026-06-25:公開站加分項(分支 `feat/public-site-polish`,待 PR)**
+  - worker 烤單款價格歷史 `web/public/data/history/<appid>.json`(`getPriceHistory`,TDD)。
+  - 前端 uPlot:點任一特價卡開 modal 看價格走勢圖(史低參考線、冷啟動「累積中」誠實提示)。
+  - About 技術說明段(i18n,給 recruiter);免費卡顯示 giveaway 價值(`worthUsd`)。
+  - 18 TDD 測試綠;本機驗證 About 渲染、點 Cyberpunk 開圖成功(canvas + uPlot)。
+- **2026-06-25:公開站推上 GitHub** — https://github.com/q86865511/SteamSaleChecker(private,`main`)。
 - **2026-06-25:公開站完整實作(P0–P2,plan Tasks 0–15)**
   - monorepo(npm workspaces:`shared` / `worker` / `web`)+ TS + vitest + tsx。
   - `shared`:幣別/折扣、創新低判斷、GamerPower 解析、Steam 解析等純函式,**TDD,17 測試全綠**。
@@ -19,9 +25,7 @@
 - **Plan 2:Discord 帳號 + 願望清單**(`api/` Fastify、OAuth2、session、`/api/wishlist`、localStorage 合併、站內收藏高亮)。
 - **Plan 3:Discord 降價通知**(bot 專區頻道 @提醒、`notifications` 防重複、`guilds.join`)。
 - **Plan 4:部署**(systemd worker timer + API service、nginx 反代、子站路徑、履歷連結)。
-- 價格走勢圖:需 worker 另烤「單款價格歷史 JSON」後,前端以 uPlot 繪製(MVP 暫緩)。
-- 一次性 ITAD 史低 seed:腳本已備(`worker/src/seed/itad-seed.ts`),上線前手動跑;需先實測 `country=TW` 是否回台幣。
-- About / 技術說明段(作品集展示)。
+- 一次性 ITAD 史低 seed:腳本已備(`worker/src/seed/itad-seed.ts`),上線前手動跑;需先實測 `country=TW` 是否回台幣(需使用者提供 ITAD key)。
 
 ## 已知問題
 - 「史低」目前為**冷啟動**狀態:第一次觀測即視為最低,故多數顯示「本站最低」。屬預期行為,文案誠實標「追蹤以來最低」;隨時間累積(或跑 ITAD seed)才逼近真正史低。
