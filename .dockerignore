@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+.git
+.github
+web/dist
+**/.astro
+data
+*.log
+.claude
+.env
+**/.env
+docs
