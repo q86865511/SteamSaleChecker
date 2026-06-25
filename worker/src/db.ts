@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { evaluateLow } from '@ssc/shared';
+import { evaluateLow, type FreeGiveaway } from '@ssc/shared';
 export type DB = Database.Database;
 export function openDb(path: string): DB {
   const db = new Database(path);
@@ -26,8 +26,19 @@ export function openDb(path: string): DB {
     CREATE TABLE IF NOT EXISTS notifications(
       user_id INTEGER, appid INTEGER, notified_low_cents INTEGER, notified_at INTEGER,
       PRIMARY KEY(user_id, appid));
+    CREATE TABLE IF NOT EXISTS report_gates(
+      report_type TEXT PRIMARY KEY, last_sent_at INTEGER);
   `);
+  // 遷移:早期 free_giveaways 無 first_seen/notified/notified_at(SQLite 無 ADD COLUMN IF NOT EXISTS)
+  addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
+  addColumnIfMissing(db, 'free_giveaways', 'notified', 'INTEGER DEFAULT 0');
+  addColumnIfMissing(db, 'free_giveaways', 'notified_at', 'INTEGER');
   return db;
+}
+
+function addColumnIfMissing(db: DB, table: string, col: string, decl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some(c => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`);
 }
 export interface Stats {
   observed_low_cents: number | null; observed_low_at: number | null;
@@ -78,4 +89,39 @@ export function markNotified(db: DB, userId: number, appid: number, lowCents: nu
     VALUES(@u,@a,@low,@at)
     ON CONFLICT(user_id, appid) DO UPDATE SET notified_low_cents=@low, notified_at=@at`)
     .run({ u: userId, a: appid, low: lowCents, at });
+}
+
+// --- 免費領取通知狀態 ---
+export function giveawayCount(db: DB): number {
+  return (db.prepare('SELECT COUNT(*) AS c FROM free_giveaways').get() as { c: number }).c;
+}
+// 記錄/更新一筆 giveaway。新插入時 notified=seedNotified?1:0(首輪 seed 不通知,避免一次轟炸現有清單);
+// 既有 id 只更新 last_seen 等、保留 notified 狀態。
+export function recordGiveaway(db: DB, g: FreeGiveaway, now: number, seedNotified: boolean): void {
+  db.prepare(`INSERT INTO free_giveaways(id,source,title,worth_usd,image,platforms,end_date,url,type,last_seen,first_seen,notified)
+    VALUES(@id,@source,@title,@worth,@image,@platforms,@endDate,@url,@type,@now,@now,@notified)
+    ON CONFLICT(id) DO UPDATE SET last_seen=@now, title=@title, end_date=@endDate, url=@url, worth_usd=@worth, image=@image`)
+    .run({
+      id: g.id, source: g.source, title: g.title, worth: g.worthUsd ?? null, image: g.image,
+      platforms: g.platforms.join(','), endDate: g.endDate, url: g.url, type: g.type, now, notified: seedNotified ? 1 : 0,
+    });
+}
+export interface PendingGiveaway {
+  id: string; title: string; url: string; type: string; platforms: string; end_date: string | null; worth_usd: string | null;
+}
+export function pendingGiveaways(db: DB): PendingGiveaway[] {
+  return db.prepare('SELECT id,title,url,type,platforms,end_date,worth_usd FROM free_giveaways WHERE notified=0').all() as PendingGiveaway[];
+}
+export function markGiveawayNotified(db: DB, id: string, now: number): void {
+  db.prepare('UPDATE free_giveaways SET notified=1, notified_at=@now WHERE id=@id').run({ id, now });
+}
+
+// --- 報告 gating(每日/每週摘要)---
+export function lastReportSent(db: DB, type: string): number | null {
+  const r = db.prepare('SELECT last_sent_at AS m FROM report_gates WHERE report_type=?').get(type) as { m: number } | undefined;
+  return r?.m ?? null;
+}
+export function recordReportSent(db: DB, type: string, now: number): void {
+  db.prepare('INSERT INTO report_gates(report_type,last_sent_at) VALUES(?,?) ON CONFLICT(report_type) DO UPDATE SET last_sent_at=?')
+    .run(type, now, now);
 }

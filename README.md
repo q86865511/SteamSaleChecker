@@ -10,6 +10,7 @@
 - **免費領取**:跨平台「領了就永久擁有」的免費遊戲/DLC(GamerPower),附領取期限與 giveaway 價值。
 - **價格走勢圖**:點任一特價卡,看該遊戲「本站追蹤以來」的價格歷史(uPlot;資料隨時間累積)。
 - **願望清單 + Discord 登入 + 降價通知**:用 Discord 登入收藏遊戲、跨裝置同步(未登入用 localStorage、登入後合併);收藏的遊戲創本站新低時,bot 在你的 Discord 專區頻道 @你提醒。
+- **免費領取通知 + 特價摘要**:新永久入庫免費遊戲出現時自動發 Discord 公告;另可開啟每日/每週特價精選摘要(`SSC_DIGEST_HOURS`)。
 - **設定頁**(`/settings`):集中主題(跟隨系統/深/淺)、語言、預設檢視。
 - 繁中/英 i18n、**深/淺色主題切換**(跟隨系統偏好、可手動切、持久)、PWA(favicon/manifest/OG 分享預覽)、資料新鮮度標示、About 技術說明段、來源歸屬。
 
@@ -53,6 +54,7 @@ npm test                         # vitest(shared / worker / api)
 | `SSC_DEAL_LIMIT` | `120` | 特價榜抓取上限(熱銷排序) |
 | `ITAD_API_KEY` | —— | ITAD 史低刷新金鑰(API Key,非 OAuth secret);設了才啟用自動/手動 seed,未設則略過 |
 | `SSC_ITAD_REFRESH_HOURS` | `24` | worker 自動 ITAD 刷新間隔(小時);需有 `ITAD_API_KEY` |
+| `SSC_DIGEST_HOURS` | `0` | 每日/每週特價摘要發 Discord 間隔(小時):0=停用、24=每日、168=每週 |
 
 ### Discord 帳號(api)
 複製 `api/.env.example` 為 `api/.env` 並填:`DISCORD_CLIENT_ID`、`DISCORD_CLIENT_SECRET`(Discord Developer Portal 取得)、`SESSION_SECRET`(≥32 字隨機字串)。Discord 應用的 OAuth2 → Redirects 需加 `http://localhost:8787/auth/callback`(上線再加正式網域)。`api/.env` 已被 gitignore,**切勿提交**。
