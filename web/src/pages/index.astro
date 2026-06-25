@@ -26,6 +26,16 @@ import Base from '../layouts/Base.astro';
     <div class="grid" id="free"></div>
   </section>
 
+  <div id="chart-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <p id="chart-title" class="modal-title"></p>
+        <button id="chart-close" class="modal-close" aria-label="關閉">✕</button>
+      </div>
+      <div id="chart-body" class="modal-body"></div>
+    </div>
+  </div>
+
   <script>
     import { boot } from '../scripts/app';
     boot();

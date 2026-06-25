@@ -1,4 +1,5 @@
 import { twd, minutesAgo } from './format';
+import { renderPriceChart } from './chart';
 import zhTW from '../i18n/zh-TW.json';
 import en from '../i18n/en.json';
 
@@ -31,7 +32,7 @@ function dealCard(d: Deal, t: Dict): string {
     : (diff != null && diff > 0
         ? `<span class="muted small">${t.fromLow.replace('{n}', Math.round(diff / 100).toLocaleString('en-US'))}</span>`
         : '');
-  return `<article class="card">
+  return `<article class="card clickable" data-appid="${d.appid}" data-title="${esc(d.nameZh)}" data-low="${d.observedLowCents ?? ''}">
     <img class="thumb" src="${esc(d.headerImage)}" alt="" loading="lazy" />
     <div class="card-body">
       <p class="card-title">${esc(d.nameZh)}</p>
@@ -57,6 +58,23 @@ function freeCard(f: FreeGiveaway, t: Dict): string {
       <div class="row">${end}<a class="claim-btn" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener">${t.claim} ↗</a></div>
     </div>
   </article>`;
+}
+function openChart(appid: number, title: string, lowCents: number | null, emptyMsg: string): void {
+  const overlay = document.getElementById('chart-modal');
+  const body = document.getElementById('chart-body');
+  const titleEl = document.getElementById('chart-title');
+  if (!overlay || !body || !titleEl) return;
+  titleEl.textContent = title;
+  body.innerHTML = '';
+  overlay.hidden = false;
+  fetch(`/data/history/${appid}.json`)
+    .then(r => (r.ok ? r.json() : []))
+    .then((pts) => renderPriceChart(body, pts, lowCents, emptyMsg))
+    .catch(() => { body.textContent = '—'; });
+}
+function closeChart(): void {
+  const overlay = document.getElementById('chart-modal');
+  if (overlay) overlay.hidden = true;
 }
 function applyI18n(t: Dict): void {
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => {
@@ -98,6 +116,20 @@ export async function boot(): Promise<void> {
   }
   const freeEl = document.getElementById('free');
   if (freeEl) freeEl.innerHTML = free.map(f => freeCard(f, t)).join('');
+  const onCardClick = (e: Event) => {
+    const card = (e.target as HTMLElement).closest<HTMLElement>('.card.clickable');
+    if (!card) return;
+    const appid = Number(card.dataset.appid);
+    const lowRaw = card.dataset.low;
+    openChart(appid, card.dataset.title ?? '', lowRaw ? Number(lowRaw) : null, t.chartEmpty);
+  };
+  document.getElementById('deals')?.addEventListener('click', onCardClick);
+  document.getElementById('ending-soon')?.addEventListener('click', onCardClick);
+  document.getElementById('chart-close')?.addEventListener('click', closeChart);
+  document.getElementById('chart-modal')?.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('chart-modal')) closeChart();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChart(); });
   const metaEl = document.getElementById('meta');
   if (metaEl && meta) {
     const mins = minutesAgo(meta.generatedAt, now);

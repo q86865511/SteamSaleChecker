@@ -13,5 +13,6 @@
   "perpetual": "永久入庫",
   "noEnd": "無期限",
   "langName": "EN",
-  "footerText": "價格資料來自 Steam 商店;免費領取資料"
+  "footerText": "價格資料來自 Steam 商店;免費領取資料",
+  "chartEmpty": "價格歷史累積中,過幾天再回來看 📈"
 }

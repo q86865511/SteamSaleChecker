@@ -13,5 +13,6 @@
   "perpetual": "Keep forever",
   "noEnd": "No deadline",
   "langName": "中",
-  "footerText": "Prices from the Steam store; free-games data"
+  "footerText": "Prices from the Steam store; free-games data",
+  "chartEmpty": "Building price history — check back in a few days 📈"
 }
