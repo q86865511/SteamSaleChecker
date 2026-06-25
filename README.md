@@ -50,15 +50,19 @@ npm test                         # vitest(shared / worker / api)
 | `SSC_DATA_DIR` | `web/public/data` | 烤出的 JSON 目錄 |
 | `SSC_DB` | `data/steam.db` | SQLite 檔路徑 |
 | `SSC_DEAL_LIMIT` | `120` | 特價榜抓取上限(熱銷排序) |
-| `ITAD_API_KEY` | —— | 僅供一次性史低 seed 腳本(`npm -w @ssc/worker run seed`),production 不需要 |
+| `ITAD_API_KEY` | —— | ITAD 史低刷新金鑰(API Key,非 OAuth secret);設了才啟用自動/手動 seed,未設則略過 |
+| `SSC_ITAD_REFRESH_HOURS` | `24` | worker 自動 ITAD 刷新間隔(小時);需有 `ITAD_API_KEY` |
 
 ### Discord 帳號(api)
 複製 `api/.env.example` 為 `api/.env` 並填:`DISCORD_CLIENT_ID`、`DISCORD_CLIENT_SECRET`(Discord Developer Portal 取得)、`SESSION_SECRET`(≥32 字隨機字串)。Discord 應用的 OAuth2 → Redirects 需加 `http://localhost:8787/auth/callback`(上線再加正式網域)。`api/.env` 已被 gitignore,**切勿提交**。
 
 **降價通知(Plan 3)**:`api/.env` 另填 `DISCORD_BOT_TOKEN`(Bot 分頁)、`DISCORD_GUILD_ID`、`DISCORD_NOTIFY_CHANNEL_ID`。Bot 以 `bot` scope + 權限 **View Channels / Send Messages / Create Instant Invite**(整數 3073)邀進你的伺服器,無需 privileged intents。worker 會載入 `api/.env`,抓取後對「收藏且創本站新低」的遊戲在頻道 @ 提醒(未設定則略過);登入時以 `guilds.join` 自動把使用者加進伺服器。
 
-### 一次性 ITAD 史低 seed(選用)
-冷啟動時「史低」只是第一次觀測值。可用 [IsThereAnyDeal](https://isthereanydeal.com/apps/) 的 **API Key**(`api/.env` 的 `ITAD_API_KEY`,**不是** OAuth Client Secret)一次性補上真實 Steam 史低(台灣區、台幣)。腳本只更新 `game_stats` 的 `seeded_low_cents` 與(必要時)`observed_low_cents` / `observed_low_at`,**不會**往 `price_history` 補歷史價格點(走勢曲線仍隨時間累積)。
+### ITAD 史低刷新(選用:自動 + 手動)
+冷啟動時「史低」只是第一次觀測值。設定 [IsThereAnyDeal](https://isthereanydeal.com/apps/) 的 **API Key**(`ITAD_API_KEY`,**不是** OAuth Client Secret)即可用真實 Steam 史低(台灣區、台幣)校正。只更新 `game_stats` 的 `seeded_low_cents` / `observed_low_cents` / `observed_low_at`,**不會**往 `price_history` 補歷史價格點(走勢曲線仍隨時間累積)。
+
+- **自動(常駐)**:worker 每輪結束檢查,距上次刷新達 `SSC_ITAD_REFRESH_HOURS`(預設 24h)就重抓一次史低寫回;失敗不影響主流程,效果於下一輪重烤反映。
+- **手動(CLI,首次驗證或一次性補):**
 
 ```bash
 # 0) 先確保 game_stats 已有資料(跑過一次 worker)
@@ -74,7 +78,7 @@ npm -w @ssc/worker run seed
 npm -w @ssc/worker run run
 ```
 
-腳本對 lookup/storelow 有重試退避,並印出幣別分布;非 TWD 會警示。**正式站**:本機 seed 只動本機 DB,production DB 在主機 Docker volume,需於主機 `docker compose exec worker npm -w @ssc/worker run seed`(`api/.env` 含 `ITAD_API_KEY`)後等下一輪 worker 重烤。
+腳本對 lookup/storelow 有重試退避,並印出幣別分布;非 TWD 會警示。**正式站**:`ITAD_API_KEY` 與其他祕密一樣放在主機的 `api/.env`(gitignore,`git reset` 不覆蓋),worker 經 `env_file` 取得;有 key 後 worker 即每日自動刷新史低,無需每次手動。
 
 ## 資料來源與歸屬
 - **Steam 商店端點**(`featuredcategories` / `appdetails` / 特價搜尋,免金鑰,台灣區 `cc=tw`):特價清單、台幣價、封面圖、熱銷排序。

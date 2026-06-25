@@ -6,6 +6,7 @@ import { openDb } from './db';
 import { runPipeline } from './pipeline';
 import { collectPending, dispatchNotifications } from './notify';
 import { writeJsonAtomic } from './bake';
+import { shouldRefresh, lastSeededAt, seedItadLows } from './seed/itad';
 import type { Meta } from '@ssc/shared';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -36,6 +37,28 @@ const main = async () => {
       console.log(`通知:${sent}/${pending.length} 已送`);
     } else {
       console.log('未設定 DISCORD_BOT_TOKEN/CHANNEL,略過通知');
+    }
+    // ITAD 每日刷新史低(常駐 worker;有 key 才跑、每 SSC_ITAD_REFRESH_HOURS 一次;
+    // 失敗不影響主流程;效果於下一輪重烤反映)。
+    const itadKey = process.env.ITAD_API_KEY;
+    if (itadKey) {
+      const last = lastSeededAt(db);
+      // honor 顯式 0(每輪都刷);空字串/NaN 才回退 24。不可用 `|| 24`(0 為 falsy)。
+      const refreshHours = Number(envOr(process.env.SSC_ITAD_REFRESH_HOURS, '24'));
+      const refreshSec = (Number.isFinite(refreshHours) ? refreshHours : 24) * 3600;
+      if (shouldRefresh(last, now, refreshSec)) {
+        console.log('ITAD 每日刷新:開始');
+        try {
+          await seedItadLows(db, { key: itadKey, log: (m) => console.log('  ' + m) });
+        } catch (e) {
+          console.warn('ITAD 刷新失敗(不影響主流程):', e instanceof Error ? e.message : e);
+        }
+      } else {
+        const hrs = last ? ((now - last) / 3600).toFixed(1) : '?';
+        console.log(`ITAD 每日刷新:跳過(上次 ${hrs}h 前)`);
+      }
+    } else {
+      console.log('未設定 ITAD_API_KEY,略過 ITAD 刷新');
     }
   } catch (e) {
     console.error('pipeline 失敗,保留上次資料:', e);
