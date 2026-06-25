@@ -4,7 +4,11 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
-- **2026-06-25:Phase C 通知包(`feat/notify-pack`,待 PR 審查)**
+- **2026-06-25:Phase B-1 遊戲評價(`feat/game-reviews`,待 PR 審查)**
+  - Steam `appreviews` 摘要抓取(`parseReviewSummary` 純函式 TDD)→ `game_reviews` 表(gated:每輪最多 30 款過期 >24h、節流 ~1/s)→ 烤進 `deals.json` 的 `review`{scoreDesc/positivePct/total};`l=tchinese` 取繁中評語。
+  - 前端:列表加「評價」欄、卡片顯示 👍 正評%(依正評率著色),hover 顯示評語 + 總評數。
+  - **100 測試**綠、worker/web tsc 乾淨、i18n 同步;Phase B 第一塊。
+- **2026-06-25:Phase C 通知包(`feat/notify-pack`,PR #10 已 merge)**
   - **免費領取 Discord 通知**:啟用閒置的 `free_giveaways` 表(遷移加 `first_seen`/`notified`/`notified_at`);首輪建立基線不通知,之後僅對新出現的 giveaway 發頻道公告(重用 `postChannelMessage`)。
   - **每日/每週特價摘要**:新 `report_gates` 表 + 重用 `shouldRefresh` gating;`formatDigest` 取折扣 Top N;`SSC_DIGEST_HOURS`(0=停用、24=每日、168=每週)控制,**預設停用**(需手動開)。
   - 純函式 `formatGiveawayMessage`/`formatDigest` 與 DB 狀態皆 TDD(**95 測試**綠);通知失敗不影響主流程。
@@ -76,8 +80,11 @@
 
 ## 待辦(功能擴充 roadmap,依序;見 `~/.claude/plans/1-icon-*.md`)
 - ~~Phase A 前端體驗包~~:✅ PR #9 已 merge。
-- **Phase C 通知包**:免費通知 + 每日/每週摘要已完成,待 PR 審查 merge(目標價通知移至 Phase B)。
-- **Phase B 資料加值 + 詳細頁**:評價 + 豐富 appdetails(介紹/截圖/類型)+ 商品詳細頁(取代圖表 modal、修鍵盤可達性)+ 全收藏頁 + sparkline + 類型篩選 + **目標價通知**(自 C 移入)。
+- ~~Phase C 通知包~~:✅ PR #10 已 merge(目標價通知移至 Phase B)。
+- **Phase B 資料加值 + 詳細頁(進行中,拆小 PR)**:
+  - ✅ B-1 遊戲評價(`feat/game-reviews`,待 PR)。
+  - ⬜ B-2 豐富 appdetails(介紹/截圖/類型/上市日)+ 商品詳細頁 `/game`(取代圖表 modal、修鍵盤可達性、OG per-game)。
+  - ⬜ B-3 全收藏頁;B-4 sparkline + 類型篩選;B-5 目標價通知(自 C 移入)。
 - **Phase D**:Steam 願望單匯入。
 
 ## 已知問題

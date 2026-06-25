@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
-  giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent } from './db';
+  giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
+  upsertReview, getReview, reviewedAt } from './db';
 import type { FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
@@ -71,5 +72,19 @@ describe('report_gates', () => {
     expect(lastReportSent(db, 'digest')).toBe(5000);
     recordReportSent(db, 'digest', 9000);
     expect(lastReportSent(db, 'digest')).toBe(9000);
+  });
+});
+
+describe('game_reviews', () => {
+  it('upsert 後可讀回;再 upsert 更新;reviewedAt 反映時間', () => {
+    const db = openDb(':memory:');
+    expect(getReview(db, 10)).toBeUndefined();
+    expect(reviewedAt(db, 10)).toBeNull();
+    upsertReview(db, 10, { scoreDesc: '好評', positivePct: 88, total: 500 }, 1000);
+    expect(getReview(db, 10)).toEqual({ scoreDesc: '好評', positivePct: 88, total: 500 });
+    expect(reviewedAt(db, 10)).toBe(1000);
+    upsertReview(db, 10, { scoreDesc: '極度好評', positivePct: 95, total: 800 }, 2000);
+    expect(getReview(db, 10)?.positivePct).toBe(95);
+    expect(reviewedAt(db, 10)).toBe(2000);
   });
 });

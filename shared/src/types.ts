@@ -1,3 +1,8 @@
+export interface ReviewSummary {
+  scoreDesc: string;   // Steam 評語(如「壓倒性好評」)
+  positivePct: number; // 正評百分比 0–100
+  total: number;       // 總評論數
+}
 export interface Deal {
   appid: number;
   nameZh: string;
@@ -12,6 +17,7 @@ export interface Deal {
   observedLowAt: number | null;
   isAtObservedLow: boolean;
   observedMaxDiscount: number;
+  review?: ReviewSummary | null;
 }
 export interface FreeGiveaway {
   id: string;

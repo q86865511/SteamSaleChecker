@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import type { DB } from './db';
-import { recordPriceAndLow, getStats, getPriceHistory } from './db';
-import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids } from './sources/steam';
+import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview } from './db';
+import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids, fetchReviewSummary } from './sources/steam';
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
 import { isAtLow } from '@ssc/shared';
@@ -55,6 +55,20 @@ export async function runPipeline(
     });
   }
   deals.sort((x, y) => x.rank - y.rank);
+
+  // 3b. 評價:每輪刷新最多 30 款過期(>24h)者,其餘沿用快取;節流 ~1/s,失敗略過。
+  const REVIEW_TTL = 24 * 3600, MAX_REVIEW_FETCH = 30;
+  let reviewFetched = 0;
+  for (const d of deals) {
+    const at = reviewedAt(db, d.appid);
+    if ((at == null || nowSec - at > REVIEW_TTL) && reviewFetched < MAX_REVIEW_FETCH) {
+      const rev = await fetchReviewSummary(d.appid);
+      if (rev) upsertReview(db, d.appid, rev, nowSec);
+      reviewFetched++;
+      await new Promise(r => setTimeout(r, 1100));
+    }
+    d.review = getReview(db, d.appid) ?? null;
+  }
 
   // 4. 免費領取
   const free = await fetchFreeGiveaways();
