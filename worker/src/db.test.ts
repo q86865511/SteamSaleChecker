@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
   giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
-  upsertReview, getReview, reviewedAt, markReviewChecked } from './db';
+  upsertReview, getReview, reviewedAt, markReviewChecked, upsertGame, gamesIndex } from './db';
 import type { FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
@@ -99,5 +99,20 @@ describe('game_reviews', () => {
     markReviewChecked(db, 21, 5000);
     expect(getReview(db, 21)?.positivePct).toBe(80);
     expect(reviewedAt(db, 21)).toBe(5000);
+  });
+});
+
+describe('games 索引(收藏頁用)', () => {
+  it('upsertGame 寫入/更新;gamesIndex 串 game_stats 史低(無則 null)', () => {
+    const db = openDb(':memory:');
+    upsertGame(db, 10, 'Game A', 'a.jpg', 200000, false, 1000);
+    recordPriceAndLow(db, 10, 1000, 150000, 25); // 建立 game_stats 史低
+    upsertGame(db, 11, 'Game B', 'b.jpg', 100000, false, 1000); // 無 game_stats
+    const idx = gamesIndex(db);
+    expect(idx.length).toBe(2);
+    expect(idx.find(g => g.appid === 10)).toMatchObject({ nameZh: 'Game A', headerImage: 'a.jpg', observedLowCents: 150000 });
+    expect(idx.find(g => g.appid === 11)).toMatchObject({ nameZh: 'Game B', observedLowCents: null });
+    upsertGame(db, 10, 'Game A v2', 'a2.jpg', 200000, false, 2000);
+    expect(gamesIndex(db).find(g => g.appid === 10)?.nameZh).toBe('Game A v2');
   });
 });
