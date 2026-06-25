@@ -1,9 +1,15 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-公開站已完成並推上 GitHub(`main`,private repo)。加分項分支 `feat/public-site-polish` 再補上**價格走勢圖(uPlot)、About 技術說明段、免費卡價值顯示**,已本機驗證,待開 PR。
+公開站(含價格圖、About)已在 GitHub `main`。**Discord 帳號 + 願望清單**(分支 `feat/discord-wishlist`)程式已完成、本機整合驗證通過(API `/health`、`/api/me` 401、OAuth 重導帶 client_id+CSRF state、CORS、未登入 localStorage 收藏),只剩**使用者跑一次真實 Discord 登入**驗證 + 開 PR。
 
 ## 已完成
+- **2026-06-25:Discord 帳號 + 願望清單(Plan 2,分支 `feat/discord-wishlist`,待 PR)**
+  - 新 `api/` workspace(Fastify + @fastify/secure-session + cors + better-sqlite3),共用 `data/steam.db` 新增 `users`/`wishlist` 表。
+  - 路由:`/health`、`/api/me`、`/api/wishlist` GET/POST/DELETE/merge(需登入,401 守門)、`/auth/discord`、`/auth/callback`(CSRF state)、`/auth/logout`;`upsertUser`。
+  - 前端:Discord 登入/登出鈕、卡片 ★ 收藏(未登入 localStorage、登入打 API、登入時合併 localStorage)。
+  - 測試 29 綠(資料層、buildAuthorizeUrl、upsert、路由守門 inject);本機整合驗證 API/CORS/OAuth 重導/localStorage 收藏皆通過。
+  - 待:使用者完成一次真實 Discord 登入(需 `api/.env` 填 client id/secret + Discord 後台加 redirect)。
 - **2026-06-25:公開站加分項(分支 `feat/public-site-polish`,待 PR)**
   - worker 烤單款價格歷史 `web/public/data/history/<appid>.json`(`getPriceHistory`,TDD)。
   - 前端 uPlot:點任一特價卡開 modal 看價格走勢圖(史低參考線、冷啟動「累積中」誠實提示)。
@@ -22,7 +28,6 @@
 - (無)
 
 ## 待辦
-- **Plan 2:Discord 帳號 + 願望清單**(`api/` Fastify、OAuth2、session、`/api/wishlist`、localStorage 合併、站內收藏高亮)。
 - **Plan 3:Discord 降價通知**(bot 專區頻道 @提醒、`notifications` 防重複、`guilds.join`)。
 - **Plan 4:部署**(systemd worker timer + API service、nginx 反代、子站路徑、履歷連結)。
 - 一次性 ITAD 史低 seed:腳本已備(`worker/src/seed/itad-seed.ts`),上線前手動跑;需先實測 `country=TW` 是否回台幣(需使用者提供 ITAD key)。

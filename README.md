@@ -9,6 +9,7 @@
 - **即將結束**:48 小時內結束的特價另成一區。
 - **免費領取**:跨平台「領了就永久擁有」的免費遊戲/DLC(GamerPower),附領取期限與 giveaway 價值。
 - **價格走勢圖**:點任一特價卡,看該遊戲「本站追蹤以來」的價格歷史(uPlot;資料隨時間累積)。
+- **願望清單 + Discord 登入**:用 Discord 登入收藏遊戲、跨裝置同步;未登入用 localStorage、登入後合併(降價通知為 Plan 3)。
 - 繁中/英 i18n、深色主題、資料新鮮度標示、About 技術說明段、來源歸屬。
 
 ## 架構
@@ -36,8 +37,11 @@ SSC_DEAL_LIMIT=40 npm -w @ssc/worker run run
 npm -w @ssc/web run dev          # 本機開發
 npm -w @ssc/web run build        # 產出 web/dist(靜態,交給 nginx)
 
+# 帳號 / 願望清單 API(需先建 api/.env,見下)
+npm -w @ssc/api run dev          # http://localhost:8787
+
 # 測試
-npm test                         # vitest(shared + worker 純函式)
+npm test                         # vitest(shared / worker / api)
 ```
 
 ### 環境變數(worker)
@@ -47,6 +51,9 @@ npm test                         # vitest(shared + worker 純函式)
 | `SSC_DB` | `data/steam.db` | SQLite 檔路徑 |
 | `SSC_DEAL_LIMIT` | `120` | 特價榜抓取上限(熱銷排序) |
 | `ITAD_API_KEY` | —— | 僅供一次性史低 seed 腳本(`npm -w @ssc/worker run seed`),production 不需要 |
+
+### Discord 帳號(api)
+複製 `api/.env.example` 為 `api/.env` 並填:`DISCORD_CLIENT_ID`、`DISCORD_CLIENT_SECRET`(Discord Developer Portal 取得)、`SESSION_SECRET`(≥32 字隨機字串)。Discord 應用的 OAuth2 → Redirects 需加 `http://localhost:8787/auth/callback`(上線再加正式網域)。`api/.env` 已被 gitignore,**切勿提交**。
 
 ## 資料來源與歸屬
 - **Steam 商店端點**(`featuredcategories` / `appdetails` / 特價搜尋,免金鑰,台灣區 `cc=tw`):特價清單、台幣價、封面圖、熱銷排序。
