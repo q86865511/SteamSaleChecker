@@ -4,7 +4,14 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
-- **2026-06-25:前端 SteamDB 風格改版(`feat/steamdb-redesign`,待 PR 審查)**
+- **2026-06-25:Phase A 前端體驗包(`feat/frontend-pack`,待 PR 審查)**
+  - **icon/PWA/OG**:`web/public/favicon.svg`(降價長條品牌標)+ `manifest.webmanifest` + `Base.astro` head 加 favicon/manifest/theme-color/OG/twitter。
+  - **設定頁** `web/src/pages/settings.astro` + `settings.ts`:主題(跟隨系統/深/淺)、語言、預設檢視集中;抽出共用 `theme.ts`/`i18n.ts` 供首頁與設定頁重用;header 加齒輪連結。
+  - **即時特價倒數**:`view.ts` 純函式 `fmtCountdown`(TDD);列表加「倒數」欄、卡片顯示倒數,`setInterval` 每秒跳動、到期標「已結束」(僅 featured 來源有 expiration)。
+  - **基本清單篩選**:`applyFilters` 純函式(TDD);toolbar 加最低折扣/最高價/「只看 ≤ 史低」。
+  - 驗證:**86 測試**綠、build(2 頁)通過、web tsc 乾淨、i18n zh/en 同步;Preview 實測 head/設定頁三選一(含跟隨系統)/倒數跳動/篩選(折扣 75→28、at-low→100)/回歸全通過。
+  - 本批是 brainstorm roadmap(A→C→B→D)的第一棒;roadmap 見 `~/.claude/plans/1-icon-*.md`。
+- **2026-06-25:前端 SteamDB 風格改版(`feat/steamdb-redesign`,PR #8 已 merge、已部署 live)**
   - 純邏輯層 `web/src/scripts/view.ts`(filter/sort/applyView/resolveTheme/nextSortDir/fmtLowDate/readChartPalette),**23 TDD 測試**綠;`Deal` 型別移此。
   - 熱門特價榜改 SteamDB 風**緊湊可排序列表**(縮圖/遊戲/折扣/特價/原價/狀態/史低日期/★)+ sticky toolbar;**卡片⇄列表**切換(localStorage 持久)。
   - **亮色主題**(`[data-theme=light]` 整套 CSS 變數 + `--heading`,跟隨 prefers-color-scheme),header 切換鈕持久;uPlot 圖表配色隨主題重繪。
@@ -62,8 +69,11 @@
 ## 進行中
 - (無)
 
-## 待辦
-- (前端 SteamDB 改版已完成,待 PR 審查 merge)
+## 待辦(功能擴充 roadmap,依序;見 `~/.claude/plans/1-icon-*.md`)
+- **Phase A 前端體驗包**:已完成,待 PR 審查 merge。
+- **Phase C 通知包**:免費領取 DC 通知 + 每日/每週特價報告 + 目標價通知。
+- **Phase B 資料加值 + 詳細頁**:評價 + 豐富 appdetails(介紹/截圖/類型)+ 商品詳細頁(取代圖表 modal)+ 全收藏頁 + sparkline + 類型篩選。
+- **Phase D**:Steam 願望單匯入。
 
 ## 已知問題
 - 「史低」冷啟動:第一次觀測即視為最低。已接 **ITAD 每日刷新校正**(本機已驗證;**正式站於部署後 worker 首輪自動 seed**,之後每日刷新)。文案仍誠實標「追蹤以來最低」。

@@ -5,6 +5,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Steam 特價追蹤 — 熱銷特價與免費領取,本站自建價格歷史" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0e1622" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Steam 特價追蹤" />
+  <meta property="og:description" content="Steam 熱銷特價與免費領取,本站自建價格歷史" />
+  <meta property="og:url" content="https://steam.terrychou.com/" />
+  <meta property="og:image" content="https://steam.terrychou.com/favicon.svg" />
+  <meta name="twitter:card" content="summary" />
   <title>Steam 特價追蹤</title>
   <style is:global>
     :root{
@@ -106,6 +115,26 @@
       .deal-table .col-thumb,.deal-table .col-when,.deal-table .col-regular{display:none}
       .deal-table thead th{top:0}
     }
+    /* --- settings page --- */
+    .settings{max-width:560px;margin:8px 0}
+    .set-row{display:flex;align-items:center;justify-content:space-between;gap:16px;
+      padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    .set-label{color:var(--heading);font-weight:500}
+    .seg{display:inline-flex;border:1px solid var(--ctl-border);border-radius:8px;overflow:hidden;background:var(--ctl-bg)}
+    .seg-btn{background:transparent;color:var(--ctl-text);border:0;border-left:1px solid var(--ctl-border);
+      padding:6px 12px;font-size:13px;cursor:pointer;line-height:1.4}
+    .seg-btn:first-child{border-left:0}
+    .seg-btn:hover{color:var(--heading)}
+    .seg-btn.on{background:var(--accent);color:var(--bg)}
+    .seg-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+    /* --- countdown + filter controls --- */
+    .countdown{color:var(--low-fg);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px}
+    .countdown.ended{color:var(--muted)}
+    .filter-ctl{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
+    .filter-ctl input[type=number]{width:74px}
+    .gear-link{display:inline-flex;align-items:center;text-decoration:none;font-size:16px;
+      background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+    .gear-link:hover{border-color:var(--accent)}
   </style>
 </head>
 <body>

@@ -11,11 +11,19 @@ export type SortDir = 'asc' | 'desc';
 export type ViewMode = 'card' | 'list';
 export type Theme = 'dark' | 'light';
 
+export interface DealFilters {
+  minDiscount: number;            // 最低折扣 %
+  maxPriceCents: number | null;   // 最高價(cents);null = 不限
+  atLowOnly: boolean;             // 只看目前 ≤ 本站史低
+}
+export const NO_FILTERS: DealFilters = { minDiscount: 0, maxPriceCents: null, atLowOnly: false };
+
 export interface ViewState {
   searchQuery: string;
   sortKey: SortKey;
   sortDir: SortDir;
   viewMode: ViewMode;
+  filters?: DealFilters;
 }
 
 export function matchesQuery(d: Deal, lowerQ: string): boolean {
@@ -46,8 +54,16 @@ export function sortDeals(deals: Deal[], key: SortKey, dir: SortDir): Deal[] {
   });
 }
 
+export function applyFilters(deals: Deal[], f: DealFilters): Deal[] {
+  return deals.filter(d =>
+    d.discountPercent >= f.minDiscount &&
+    (f.maxPriceCents == null || d.priceCents <= f.maxPriceCents) &&
+    (!f.atLowOnly || d.isAtObservedLow));
+}
+
 export function applyView(deals: Deal[], s: ViewState): Deal[] {
-  return sortDeals(filterDeals(deals, s.searchQuery), s.sortKey, s.sortDir);
+  const filtered = applyFilters(filterDeals(deals, s.searchQuery), s.filters ?? NO_FILTERS);
+  return sortDeals(filtered, s.sortKey, s.sortDir);
 }
 
 export function resolveTheme(stored: string | null, prefersDark: boolean): Theme {
@@ -68,6 +84,18 @@ export function fmtLowDate(atSec: number | null): string {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${d.getUTCFullYear()}/${mm}/${dd}`;
+}
+
+// 特價剩餘倒數;<=0 回 null(已到期,呼叫端隱藏)。dayUnit 供 i18n(天/d)。
+export function fmtCountdown(secLeft: number, dayUnit = 'd'): string | null {
+  if (secLeft <= 0) return null;
+  const d = Math.floor(secLeft / 86400);
+  const h = Math.floor((secLeft % 86400) / 3600);
+  const m = Math.floor((secLeft % 3600) / 60);
+  const s = Math.floor(secLeft % 60);
+  const p = (n: number) => String(n).padStart(2, '0');
+  const hms = `${p(h)}:${p(m)}:${p(s)}`;
+  return d > 0 ? `${d}${dayUnit} ${hms}` : hms;
 }
 
 export interface ChartPalette { line: string; low: string; axis: string; grid: string; }

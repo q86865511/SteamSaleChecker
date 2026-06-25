@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterDeals, sortDeals, applyView, resolveTheme, nextSortDir, fmtLowDate, readChartPalette,
-  type Deal, type ViewState,
+  fmtCountdown, applyFilters, NO_FILTERS,
+  type Deal, type ViewState, type DealFilters,
 } from './view';
 
 const mk = (o: Partial<Deal>): Deal => ({
@@ -76,4 +77,49 @@ describe('readChartPalette', () => {
   it('讀得到變數時使用該值', () =>
     expect(readChartPalette(n => ({ '--accent': '#abc' } as Record<string, string>)[n] ?? '').line).toBe('#abc'));
   it('變數為空時回退預設色', () => expect(readChartPalette(() => '').line).toBe('#66c0f4'));
+});
+
+describe('fmtCountdown', () => {
+  it('剩餘 <= 0 回 null(已到期)', () => {
+    expect(fmtCountdown(0)).toBeNull();
+    expect(fmtCountdown(-5)).toBeNull();
+  });
+  it('未滿一天顯示 HH:MM:SS', () => {
+    expect(fmtCountdown(59)).toBe('00:00:59');
+    expect(fmtCountdown(3661)).toBe('01:01:01');
+  });
+  it('超過一天顯示「{d}{unit} HH:MM:SS」', () => {
+    expect(fmtCountdown(86400 + 3661, '天')).toBe('1天 01:01:01');
+    expect(fmtCountdown(2 * 86400 + 11565, '天')).toBe('2天 03:12:45');
+  });
+  it('day 單位可換(i18n)', () => expect(fmtCountdown(90000, 'd')).toBe('1d 01:00:00'));
+});
+
+describe('applyFilters', () => {
+  const ds = [
+    mk({ appid: 1, discountPercent: 80, priceCents: 10000, isAtObservedLow: true }),
+    mk({ appid: 2, discountPercent: 30, priceCents: 50000, isAtObservedLow: false }),
+    mk({ appid: 3, discountPercent: 50, priceCents: 20000, isAtObservedLow: true }),
+  ];
+  it('NO_FILTERS 不過濾', () => expect(applyFilters(ds, NO_FILTERS)).toHaveLength(3));
+  it('最低折扣門檻', () =>
+    expect(applyFilters(ds, { ...NO_FILTERS, minDiscount: 50 }).map(d => d.appid)).toEqual([1, 3]));
+  it('最高價門檻', () =>
+    expect(applyFilters(ds, { ...NO_FILTERS, maxPriceCents: 20000 }).map(d => d.appid)).toEqual([1, 3]));
+  it('只看 ≤ 史低', () =>
+    expect(applyFilters(ds, { ...NO_FILTERS, atLowOnly: true }).map(d => d.appid)).toEqual([1, 3]));
+  it('組合條件', () =>
+    expect(applyFilters(ds, { minDiscount: 50, maxPriceCents: 15000, atLowOnly: true }).map(d => d.appid)).toEqual([1]));
+});
+
+describe('applyView 也套用 filters', () => {
+  const ds = [mk({ appid: 1, discountPercent: 80 }), mk({ appid: 2, discountPercent: 20 })];
+  it('filters 縮小結果', () => {
+    const s: ViewState = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: 'list', filters: { ...NO_FILTERS, minDiscount: 50 } };
+    expect(applyView(ds, s).map(d => d.appid)).toEqual([1]);
+  });
+  it('無 filters 欄位時不過濾(向後相容)', () => {
+    const s = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: 'list' } as ViewState;
+    expect(applyView(ds, s)).toHaveLength(2);
+  });
 });

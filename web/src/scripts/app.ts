@@ -1,24 +1,18 @@
 import { twd, minutesAgo } from './format';
 import { renderPriceChart, type PricePoint } from './chart';
 import {
-  applyView, resolveTheme, nextSortDir, fmtLowDate, readChartPalette,
+  applyView, nextSortDir, fmtLowDate, fmtCountdown, readChartPalette, NO_FILTERS,
   type Deal, type ViewState, type SortKey, type SortDir, type ViewMode, type Theme, type ChartPalette,
 } from './view';
 import { getMe, loadWishlist, addWish, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
-import zhTW from '../i18n/zh-TW.json';
-import en from '../i18n/en.json';
+import { initTheme, setTheme, storeTheme } from './theme';
+import { getLang, dict, applyI18n, type Dict } from './i18n';
 
 interface FreeGiveaway {
   id: string; title: string; image: string; platforms: string[]; endDate: string | null; url: string; type: string; worthUsd?: string;
 }
 interface Meta { generatedAt: number; trackingSince: number; dealCount: number; freeCount: number; ok: boolean; }
 
-type Dict = typeof zhTW;
-const DICTS: Record<string, Dict> = { 'zh-TW': zhTW, en };
-
-function getLang(): 'zh-TW' | 'en' {
-  return localStorage.getItem('ssc-lang') === 'en' ? 'en' : 'zh-TW';
-}
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
@@ -48,7 +42,7 @@ function dealCard(d: Deal, t: Dict, wished: boolean): string {
         <span class="price">${twd(d.priceCents)}</span>
         <span class="was">${twd(d.regularCents)}</span>
       </div>
-      <div class="row">${low}</div>
+      <div class="row">${low}${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" style="margin-left:auto"></span>` : ''}</div>
     </div>
   </article>`;
 }
@@ -62,6 +56,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <th class="col-num col-regular" aria-sort="none"><button class="col-sort" data-sort="regular">${esc(t.colWas)}</button></th>
       <th class="col-status">${esc(t.colStatus)}</th>
       <th class="col-when">${esc(t.colLowDate)}</th>
+      <th class="col-when">${esc(t.colEndsIn)}</th>
       <th class="col-star"></th>
     </tr></thead>`;
   const body = rows.map(d => {
@@ -75,6 +70,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <td class="col-num was">${twd(d.regularCents)}</td>
       <td class="col-status">${status}</td>
       <td class="col-when">${esc(fmtLowDate(d.observedLowAt))}</td>
+      <td class="col-when">${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}"></span>` : ''}</td>
       <td class="col-star"><button class="wish-btn${wished ? ' on' : ''}" data-appid="${d.appid}" aria-label="${esc(t.wishlist)}" aria-pressed="${wished}">★</button></td>
     </tr>`;
   }).join('');
@@ -124,34 +120,18 @@ function closeChart(): void {
   if (overlay) overlay.hidden = true;
 }
 
-function applyI18n(t: Dict): void {
-  document.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => {
-    const k = el.dataset.i18n as keyof Dict;
-    if (t[k]) el.textContent = String(t[k]);
-  });
-  document.querySelectorAll<HTMLElement>('[data-i18n-ph]').forEach(el => {
-    const k = el.dataset.i18nPh as keyof Dict;
-    if (t[k]) (el as HTMLInputElement).placeholder = String(t[k]);
-  });
-  document.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach(el => {
-    const k = el.dataset.i18nAria as keyof Dict;
-    if (t[k]) el.setAttribute('aria-label', String(t[k]));
-  });
-}
-
-function applyTheme(theme: Theme, t: Dict): void {
-  document.documentElement.setAttribute('data-theme', theme);
+function updateThemeIcon(theme: Theme, t: Dict): void {
   const btn = document.getElementById('theme-toggle');
   if (btn) { btn.textContent = theme === 'light' ? '☀️' : '🌙'; btn.setAttribute('aria-label', t.themeToggle); }
 }
 
 export async function boot(): Promise<void> {
   const lang = getLang();
-  const t = DICTS[lang];
+  const t = dict();
   document.documentElement.lang = lang;
   applyI18n(t);
 
-  applyTheme(resolveTheme(localStorage.getItem('ssc-theme'), window.matchMedia('(prefers-color-scheme: dark)').matches), t);
+  updateThemeIcon(initTheme(), t);
 
   const langToggle = document.getElementById('lang-toggle');
   if (langToggle) {
@@ -163,8 +143,7 @@ export async function boot(): Promise<void> {
   }
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const next: Theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    applyTheme(next, t);
-    localStorage.setItem('ssc-theme', next);
+    setTheme(next); storeTheme(next); updateThemeIcon(next, t);
     const body = document.getElementById('chart-body');
     if (lastChart && chartOpen() && body) renderPriceChart(body, lastChart.points, lastChart.low, t.chartEmpty, currentPalette());
   });
@@ -193,12 +172,20 @@ export async function boot(): Promise<void> {
   }
 
   const allDeals: Deal[] = deals;
-  const state: ViewState = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: getViewMode() };
+  const state: ViewState = { searchQuery: '', sortKey: 'rank', sortDir: 'asc', viewMode: getViewMode(), filters: { ...NO_FILTERS } };
 
   function updateSortIndicators(): void {
     document.querySelectorAll<HTMLElement>('.deal-table th[aria-sort]').forEach(th => {
       const key = th.querySelector<HTMLButtonElement>('.col-sort')?.dataset.sort;
       th.setAttribute('aria-sort', key === state.sortKey ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    });
+  }
+  function tickCountdowns(): void {
+    const nowSec = Date.now() / 1000;
+    document.querySelectorAll<HTMLElement>('.countdown[data-exp]').forEach(el => {
+      const txt = fmtCountdown(Number(el.dataset.exp) - nowSec, t.countdownDay);
+      if (txt) { el.textContent = txt; el.classList.remove('ended'); }
+      else { el.textContent = t.ended; el.classList.add('ended'); }
     });
   }
   function render(): void {
@@ -210,6 +197,7 @@ export async function boot(): Promise<void> {
     else if (state.viewMode === 'card') host.innerHTML = `<div class="grid">${rows.map(d => dealCard(d, t, wishSet.has(d.appid))).join('')}</div>`;
     else host.innerHTML = dealTable(rows, t, wishSet);
     updateSortIndicators();
+    tickCountdowns();
   }
   function updateViewToggle(): void {
     const btn = document.getElementById('view-toggle');
@@ -240,6 +228,7 @@ export async function boot(): Promise<void> {
 
   render();
   updateViewToggle();
+  setInterval(tickCountdowns, 1000);
 
   const onItemClick = async (e: Event) => {
     const target = e.target as HTMLElement;
@@ -289,6 +278,19 @@ export async function boot(): Promise<void> {
     state.viewMode = state.viewMode === 'list' ? 'card' : 'list';
     localStorage.setItem('ssc-view', state.viewMode);
     updateViewToggle();
+    render();
+  });
+  document.getElementById('filter-discount')?.addEventListener('change', (e) => {
+    state.filters!.minDiscount = Number((e.target as HTMLSelectElement).value) || 0;
+    render();
+  });
+  document.getElementById('filter-maxprice')?.addEventListener('input', (e) => {
+    const v = Number((e.target as HTMLInputElement).value);
+    state.filters!.maxPriceCents = v > 0 ? Math.round(v * 100) : null;
+    render();
+  });
+  document.getElementById('filter-atlow')?.addEventListener('change', (e) => {
+    state.filters!.atLowOnly = (e.target as HTMLInputElement).checked;
     render();
   });
 
