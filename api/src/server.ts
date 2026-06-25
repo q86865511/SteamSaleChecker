@@ -19,7 +19,7 @@ export async function buildApp(db: DB): Promise<FastifyInstance> {
     secret: SESSION_SECRET,
     salt: 'ssc-fixed-salt16',
     cookieName: 'ssc_session',
-    cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: false },
+    cookie: { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.COOKIE_SECURE === 'true' },
   });
   app.get('/health', async () => ({ ok: true }));
   registerAuth(app, db);

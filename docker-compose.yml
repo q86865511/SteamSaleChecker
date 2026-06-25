@@ -1,0 +1,32 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    command: ["npm","-w","@ssc/api","run","start"]
+    env_file: ./api/.env
+    environment:
+      NODE_ENV: production
+      API_PORT: "8788"
+      SSC_DB: /data/steam.db
+      COOKIE_SECURE: "true"
+    ports:
+      - "127.0.0.1:8788:8788"
+    volumes:
+      - sscdata:/data
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["sh","-c","while true; do npm -w @ssc/worker run run || true; sleep ${SSC_INTERVAL:-1800}; done"]
+    env_file: ./api/.env
+    environment:
+      NODE_ENV: production
+      SSC_DB: /data/steam.db
+      SSC_DATA_DIR: /site-data
+      SSC_DEAL_LIMIT: "120"
+    volumes:
+      - sscdata:/data
+      - /srv/steam/data:/site-data
+
+volumes:
+  sscdata:

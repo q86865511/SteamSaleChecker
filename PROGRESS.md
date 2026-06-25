@@ -1,9 +1,16 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-三個子系統(公開站 / 帳號收藏 / 降價通知)都在 GitHub `main`,且已 **live 真機驗證**:真實 Discord 登入(`guilds.join` 自動入伺服器)、bot 在頻道 @使用者 的降價通知、去重防轟炸皆正常。另在 `feat/bot-presence` 分支加了 **bot 上線(Gateway presence)**(api 在跑時 bot 顯示綠燈)。下一步:部署(Plan 4)。
+**已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-25:Plan 4 部署上線(`feat/deploy`)**
+  - 容器化:`Dockerfile`(node:22)+ `docker-compose.yml`(api:8788 + worker loop,sqlite volume,bind `/srv/steam/data`)+ `.dockerignore`。
+  - prod 設定:cookie `secure` 讀 `COOKIE_SECURE`;`api/.env` 線上值(redirect/origin = `https://steam.terrychou.com`)。
+  - 主機:clone repo、web build → `/srv/steam`、`docker compose up`(api health + worker 寫資料)。
+  - 接線(只新增、不動現有站):Caddy 加 `steam.terrychou.com` 區塊(validate→reload)、cloudflared 加 ingress + DNS route(restart)。三站對外皆 200。
+  - CI/CD:`.github/workflows/deploy.yml`(`appleboy/ssh-action`,push main → git reset + build + `compose up --build` + health);secrets `OCI_HOST/USER/SSH_KEY` 已設、deploy 公鑰已裝主機。
+  - **live 驗證**:`https://steam.terrychou.com` 119 特價 + 11 免費、`/auth/discord` prod redirect、`/api/me` 401、bot 上線。
 - **2026-06-25:live 真機驗證 + bot 上線**
   - 用真實帳號 `ye_ye8555` 跑通:Discord 登入 → ★ 收藏(Cyberpunk、潛水員戴夫)→ bot @你 降價通知 2/2 送出 → 再跑去重變 0(防轟炸)。
   - Plan 2(登入/收藏)與 Plan 3(通知)皆 live 驗證通過。

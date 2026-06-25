@@ -1,0 +1,36 @@
+name: Deploy to Oracle
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-steam
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy to the OCI VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ${{ secrets.OCI_USER }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/SteamSaleChecker
+            git fetch --all --prune
+            git reset --hard origin/main
+            npm ci
+            npm -w @ssc/web run build
+            rsync -a --delete --exclude data ./web/dist/ /srv/steam/
+            docker compose up -d --build
+            ok=0
+            for i in $(seq 1 15); do
+              sleep 2
+              if curl -fsS http://127.0.0.1:8788/health >/dev/null; then ok=1; echo "  <- API healthy (try $i)"; break; fi
+            done
+            [ "$ok" = 1 ] || { echo "API did not become healthy"; docker compose logs --tail=40; exit 1; }
