@@ -34,3 +34,19 @@ export interface User { id: number; discord_id: string; username: string; avatar
 export function getUserById(db: DB, id: number): User | undefined {
   return db.prepare('SELECT id, discord_id, username, avatar FROM users WHERE id = ?').get(id) as User | undefined;
 }
+
+export function addWish(db: DB, userId: number, appid: number, at: number): void {
+  db.prepare('INSERT OR IGNORE INTO wishlist(user_id, appid, added_at) VALUES(?,?,?)').run(userId, appid, at);
+}
+export function removeWish(db: DB, userId: number, appid: number): void {
+  db.prepare('DELETE FROM wishlist WHERE user_id = ? AND appid = ?').run(userId, appid);
+}
+export function listWish(db: DB, userId: number): number[] {
+  return (db.prepare('SELECT appid FROM wishlist WHERE user_id = ? ORDER BY added_at DESC, appid')
+    .all(userId) as { appid: number }[]).map(r => r.appid);
+}
+export function mergeWish(db: DB, userId: number, appids: number[], at: number): void {
+  const stmt = db.prepare('INSERT OR IGNORE INTO wishlist(user_id, appid, added_at) VALUES(?,?,?)');
+  const tx = db.transaction((ids: number[]) => { for (const id of ids) stmt.run(userId, id, at); });
+  tx(appids);
+}
