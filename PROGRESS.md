@@ -1,49 +1,16 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-**已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
+**已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。**R5 批次已合併 main 並自動部署 live**(GitHub Actions「Deploy to Oracle」綠;PR #14 merged、#15–#18 內容已隨整鏈快進進 main 故關閉)。R5 含:列內走勢圖+類型篩選、收藏目標價、通知偏好子系統(降價/免費/摘要/類型/頻道·DM)、Steam 願望單匯入,及小尾巴+2 bug;末端含對抗式 review 修正(目標價只在創新低觸發、個人免費永久遺失 2 bug)。**164 測試綠**。**登入後通知偏好/目標價/願望單匯入 + 真實 Discord 頻道/DM 待使用者用自己帳號/bot 親驗。**
 
 ## 已完成
-- **2026-06-26:R5 對抗式 review 修正(commit 於 `feat/steam-import` 末端,跨 PR)**
-  - 7 路多代理對抗式 review(每筆 refute-by-default 驗證)出 9 confirmed;修了 7 項(略過 1 個「私密 vs 空願望單」nit,已有公開提示文案)。
-  - **[bug] 目標價只在創新低時才觸發**(B-5 常見情境失效):史低已低於目標時,之後跌到「≤目標但>史低」永不通知。→ `shouldNotifyNewLow` 加 `isNewLow`:target 看現價(跌破即發,不必新低)、drop 只在新低發;`collectPending` 改吃「所有特價候選」(index.ts 由 deals+newLows 組),新增整合測試。
-  - **[bug] 個人免費通知會永久遺失**:newIds-only feed + 全域 cap 使被略過者下輪不再出現。→ 改 per-user 基線(首見建基線不通知)+ 完整現有 Steam 清單 feed,達上限未送者「不標記→下輪續發」;`giveaways.ts` 還原回傳數;新 `free-personal.test.ts`(stub timers)。
-  - 小修:`extractSteamId64` 錨定(18碼/嵌入/`/id/`17碼 vanity 不再誤判)、`downsampleSpark` n===1 防除零、`parseWishlistAppids` 只收正整數、import 上限 4000 筆 + `AbortSignal.timeout(8000)`。
-  - **164 測試**綠(+10)、四 workspace tsc 乾淨。
-- **2026-06-26:Phase D Steam 願望單匯入(`feat/steam-import`,待 PR;R5 批次第 5 棒,疊在 notif 上)**
-  - **spike 確認**:Steam 2024–25 改版後,`store.../wishlistdata` 已不穩;改用 `api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=`(**免金鑰**,回 `response.items[].appid`)。
-  - 純函式 TDD:`extractSteamId64`(17 碼或 `/profiles/` 網址;vanity `/id/` 回 null)、`parseWishlistAppids`(放 shared)。
-  - API:`POST /api/wishlist/import { steamId }` → 後端抓公開願望單 → `mergeWish` → 回 `{imported, wishlist}`;壞 id 400、抓取失敗 502;401 守門。
-  - 前端:`/favorites` 登入後顯示匯入框(輸入 SteamID/網址 → 匯入 → 併入收藏重繪);`importSteamWishlist` 客戶端;i18n 6 鍵。
-  - **154 測試**綠、四 workspace tsc 乾淨、build、i18n 98/98;**實機 E2E**:個人檔網址→SteamID64→live 抓 41 筆→解析 41 appids 通過;Preview 匯入框登入閘正確。**登入後實際併入待使用者用自己帳號驗。**
-- **2026-06-26:通知設定 per-user 偏好子系統(`feat/notif-prefs`,待 PR;R5 批次第 4 棒,疊在 polish 上)**
-  - **DB(worker+api 雙建)**:`notif_prefs`(drop/free/digest_hours/delivery)、`notif_genres`、`notif_free_sent`、`notif_digest_gates`;`NotifPrefs` 型別移 shared 共用。
-  - **API**:`GET/PUT /api/notif/prefs`(部分合併 + genres 全量取代;驗證 digest∈{0,24,168}、delivery∈{channel,dm});`getNotifPrefs`/`putNotifPrefs`(TDD)。
-  - **Worker**:`getNotifPrefsForUser` + 免費/摘要 gate 助手(TDD);`collectPending` 改用真實偏好(drop 開關 + 類型白名單 + delivery);`dispatchNotifications` 依 delivery 走頻道@或 `sendDm`(開 DM→發;403→throw 不標記;TDD mock fetch)。
-  - **個人免費**(`free-personal.ts`):只對本輪新出現的 Steam 免費、依各自 delivery 通知(避免剛開啟就被 backlog 轟炸);**個人摘要**(`maybeSendPersonalDigests`):各自 gate + 依類型白名單過濾(`filterDealsByGenres` TDD)+ delivery。→ 使用者不必 SSH 改 `SSC_DIGEST_HOURS` 即可自訂每日/每週摘要。
-  - **設定頁**:登入才顯示的通知區(降價/免費/摘要/方式 radiogroup + 類型多選,由 `genres.json` 動態產生);未登入顯示提示。`notif.ts` 加 `getNotifPrefs`/`putNotifPrefs`。i18n 加 14 鍵(zh/en 各 92)。
-  - **147 測試**綠、四 workspace tsc 乾淨、build、i18n parity;Preview 登出路徑(提示顯示、區塊隱藏、4 radiogroup+類型 host 在位)無錯。**登入後 UI 讀寫 + 真實 Discord 頻道/DM/個人免費/摘要待使用者用 bot 驗一輪**。
-- **2026-06-26:小尾巴 + 2 bug(`feat/polish-fixes`,待 PR;R5 批次第 3 棒,疊在 b5 上)**
-  - **倒數誠實標示**(bug):已查證 `appdetails`/商店頁/`featuredcategories` 後,熱銷搜尋來的多數特價無公告結束日(無便宜來源可補);無 `discountExpiration` 者改顯示「特價中」而非空白(列表/卡片/詳細頁),i18n `onSaleNoEnd`。
-  - **免費只看 Steam**(bug):純函式 `isSteamGiveaway` + `keepForeverGame` 加平台過濾(TDD);bake 即過濾,實測 free 11→1(只剩 Steam)。
-  - **長存表清理**:`prunePriceHistory`(TDD,史低存 game_stats 不受影響)+ pipeline 修剪 + env `SSC_HISTORY_KEEP_DAYS`(預設 365)。
-  - **設定頁 radiogroup**(a11y):主題/語言/檢視由 `role=group`+`aria-pressed` 改為 `role=radiogroup`+`role=radio`+`aria-checked`+roving tabindex + 方向鍵(可重用於 PR4 通知設定);Preview 實測鍵盤切換通過。
-  - **PWA PNG + OG 圖**:`web/scripts/gen-icons.mjs`(sharp 柵格化)產 icon-192/512.png + og-image.png(1200×630),manifest icons + Base.astro head(og:image/twitter summary_large_image/apple-touch-icon)。
-  - **刪 `.modal-*` 死 CSS**(圖表 modal 已被 /game 取代,全無引用)。
-  - **132 測試**綠、四 workspace tsc 乾淨、build 4 頁;Preview 實測倒數標示(7 倒數/8「特價中」)、radiogroup 鍵盤、head OG、無 console 錯誤。
-- **2026-06-25:B-5 目標價(`feat/b5-target-price`,待 PR;R5 批次第 2 棒,疊在 b4 上)**
-  - `wishlist` 加 `target_low_cents` 欄(worker+api 雙端 `addColumnIfMissing` 遷移,NULL=未設)。
-  - 純函式 `shouldNotifyNewLow`(TDD):類型白名單無交集→不發;設目標→命中(low≤target)才發 `target`(覆蓋 drop,設目標就只看目標);否則看 `dropEnabled`。`collectPending` 改用之(此 PR drop 預設開、genres 預設空,prefs 留 PR4)。
-  - `getWishersForApp` 帶 `targetLowCents`;`formatNotifyMessage` 加 `reason`(target→「跌破目標價」措辭)。
-  - API:`GET /api/wishlist/targets`、`PUT /api/wishlist/:appid/target`(驗證已收藏/非負/null 清除);api db `setTargetLow`/`listTargets`(TDD)。
-  - 前端:新 `notif.ts`(`getTargets`/`putTarget`);`/game` 與 `/favorites` 在登入且已收藏時顯示 TWD 目標價輸入,存檔即 PUT。i18n 加 targetPrice* / save*。
-  - **129 測試**綠、worker/api/web tsc 乾淨、build;Preview 登出路徑無錯(目標 UI 正確隱藏)。真實 Discord 目標通知待使用者用 bot 驗一輪。
-- **2026-06-25:B-4 列內 sparkline + 類型篩選(`feat/b4-sparkline-genres`,待 PR;R5 批次第 1 棒)**
-  - `Deal`(shared 正本 + web/view.ts 副本)加 `spark?: number[]`(最近價格序列降採樣)、`genres?: string[]`。
-  - 純函式 TDD:`downsampleSpark`(shared,均勻取樣保留頭尾)、`buildSparklinePath`(web/view.ts,SVG path、y 反向高價在頂)、`applyFilters` 加 genre 分支。
-  - 新 DB 表 `game_genres` + `replaceGameGenres`/`getGenresForApp`/`allGenres`(TDD);worker enrich 時入庫類型,烤 `genres.json`(全站類型聯集),deals.json 帶 spark/genres。
-  - 前端:列表加「走勢」欄(手刻 inline SVG sparkline,降綠/升紅/平灰)、卡片亦顯示;toolbar 加類型下拉(選項由 deals 的 genres 聯集動態填,中文字串對齊 DB)。
-  - i18n 加 `colTrend`/`filterType`/`filterTypeAny`(zh/en)。**119 測試**綠、worker/web/shared tsc 乾淨、build 4 頁;Preview 實測 sparkline 渲染、類型篩選(10→7→10)、無 console 錯誤。
+- [2026-06-26] 🧪 R5.7 對抗式review修2bug+5小修
+- [2026-06-26] 🌐 R5.6 Steam願望單匯入
+- [2026-06-26] 🌐 R5.5 通知偏好子系統
+- [2026-06-26] 🌐 R5.4 免費濾Steam/史表清理
+- [2026-06-26] 🖥️ R5.3 倒數標示/設定a11y/PWA圖
+- [2026-06-25] 🌐 R5.2 收藏目標價通知
+- [2026-06-25] 🖥️ R5.1 列內走勢圖/類型篩選
 - **2026-06-25:Phase B-3 全收藏頁(`feat/favorites`,待 PR 審查)**
   - worker:enrich 時把遊戲名/封面/原價持久化進 `games` 表(原本閒置)+ 烤 `games-index.json`(LEFT JOIN game_stats 帶史低);收藏的遊戲即使目前沒特價也能顯示。TDD `upsertGame`/`gamesIndex`。
   - 新 `/favorites` 頁:登入感知載入收藏 → 比對 deals(現價/折扣)+ games-index(名/圖/史低)渲染卡片、★ 即時移除、連到 `/game`;header 加 ♥ 連結。
@@ -133,10 +100,10 @@
 - **Phase B 資料加值 + 詳細頁(進行中,拆小 PR)**:
   - ✅ B-1 遊戲評價(PR #11 已 merge)。
   - ✅ B-2 商品詳細頁 `/game`(PR #12 已 merge)。
-  - ✅ B-3 全收藏頁(`feat/favorites` 待 PR)。
-  - 🔧 B-4 sparkline+類型篩選(`feat/b4-sparkline-genres`);🔧 B-5 目標價(`feat/b5-target-price`);🔧 小尾巴+bug(`feat/polish-fixes`);🔧 通知設定(`feat/notif-prefs`)— 皆待 PR(R5 批次,疊加分支)。
+  - ✅ B-3 全收藏頁(PR #13 已 merge)。
+  - ✅ B-4 sparkline+類型篩選 / ✅ B-5 目標價 / ✅ 小尾巴+2bug / ✅ 通知設定 per-user 偏好 — **R5 批次已合併 main 並部署 live**(PR #14 merged、#15–#18 內容隨整鏈快進進 main)。
   - 註:per-game OG 分享需 SSR/預產,與「靜態 + query param client fetch」不相容,故詳細頁沿用站台通用 OG(client 端僅改 document.title)。
-- 🔧 **Phase D**:Steam 願望單匯入(`feat/steam-import` 待 PR)。
+- ✅ **Phase D**:Steam 願望單匯入(R5 批次,已合併部署)。
 
 ## 已知問題
 - 「史低」冷啟動:第一次觀測即視為最低。已接 **ITAD 每日刷新校正**(本機已驗證;**正式站於部署後 worker 首輪自動 seed**,之後每日刷新)。文案仍誠實標「追蹤以來最低」。
