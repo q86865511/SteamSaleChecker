@@ -35,6 +35,15 @@ export function getUserById(db: DB, id: number): User | undefined {
   return db.prepare('SELECT id, discord_id, username, avatar FROM users WHERE id = ?').get(id) as User | undefined;
 }
 
+export function upsertUser(db: DB, me: { id: string; username: string; avatar: string | null }): number {
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare(`INSERT INTO users(discord_id, username, avatar, created_at, last_login)
+    VALUES(@id,@u,@a,@now,@now)
+    ON CONFLICT(discord_id) DO UPDATE SET username=@u, avatar=@a, last_login=@now`)
+    .run({ id: me.id, u: me.username, a: me.avatar, now });
+  return (db.prepare('SELECT id FROM users WHERE discord_id = ?').get(me.id) as { id: number }).id;
+}
+
 export function addWish(db: DB, userId: number, appid: number, at: number): void {
   db.prepare('INSERT OR IGNORE INTO wishlist(user_id, appid, added_at) VALUES(?,?,?)').run(userId, appid, at);
 }
