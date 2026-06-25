@@ -4,6 +4,11 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-25:後端小修(`feat/backend-fixes`)**
+  - discord.js `ready` → `clientReady`(`api/src/presence.ts`):消棄用警告;lockfile 確認解析版本 14.26.4 已支援 `clientReady`。
+  - ITAD seed 強化(TDD):抽出純函式 `parseStoreLows`(保留 currency + 史低 timestamp,優先用 `amountInt` 避免浮點誤差),12 測試綠;lookup/storelow 加重試退避;`--check` 乾跑;dotenv 讀 `api/.env`;幣別驗證(非 TWD 警示)。
+  - seed 也誠實改寫 `observed_low_at` 為真實史低日期(僅在 seeded 史低成為/追平最低且有 timestamp 時)。
+  - **本機實跑驗證**:ITAD **API Key**(非 OAuth secret)有效;**119/119** 對應 ITAD id、**115** 款史低、幣別**全為 TWD**(`country=TW` 確認回台幣);寫入 115 款 `game_stats`(例:Batman NT$133 @ 2024-12-19)。重烤後 `deals.json` 反映新史低:19 款由冷啟動誤判「本站最低」修正為實際高於史低。
 - **2026-06-25:Plan 4 部署上線(`feat/deploy`)**
   - 容器化:`Dockerfile`(node:22)+ `docker-compose.yml`(api:8788 + worker loop,sqlite volume,bind `/srv/steam/data`)+ `.dockerignore`。
   - prod 設定:cookie `secure` 讀 `COOKIE_SECURE`;`api/.env` 線上值(redirect/origin = `https://steam.terrychou.com`)。
@@ -47,11 +52,11 @@
 - (無)
 
 ## 待辦
-- **Plan 4:部署**(systemd worker timer + API service、nginx 反代、子站路徑、履歷連結)。
-- 一次性 ITAD 史低 seed:腳本已備(`worker/src/seed/itad-seed.ts`),上線前手動跑;需先實測 `country=TW` 是否回台幣(需使用者提供 ITAD key)。
+- **前端 SteamDB 風格改版(PR2)**:緊湊可排序列表 + 卡片/列表切換 + 亮色主題 + 單款搜尋(見計畫)。
+- **正式站 ITAD 史低 seed(可選)**:本機已驗證並 seed;正式站 DB 在主機 Docker volume,需於主機 `docker compose exec worker npm -w @ssc/worker run seed`(`api/.env` 含 `ITAD_API_KEY`)後等下一輪 worker 重烤。平時 runtime 不需 ITAD。
 
 ## 已知問題
-- 「史低」目前為**冷啟動**狀態:第一次觀測即視為最低,故多數顯示「本站最低」。屬預期行為,文案誠實標「追蹤以來最低」;隨時間累積(或跑 ITAD seed)才逼近真正史低。
+- 「史低」冷啟動:第一次觀測即視為最低。**本機已跑 ITAD seed**(2026-06-25),本機史低已為真實值並標真實日期;**正式站尚未 seed**,仍為冷啟動,待主機手動執行(見待辦)。文案誠實標「追蹤以來最低」。
 - Steam 未公開端點有 per-IP 節流(~200 req/5min);`appdetails` 已節流 ~1 req/s + 退避。
 - `npm audit` 有數個 Astro/vitest 鏈的 dev 相依告警(非 production 暴露)。
 

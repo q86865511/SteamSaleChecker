@@ -57,6 +57,25 @@ npm test                         # vitest(shared / worker / api)
 
 **降價通知(Plan 3)**:`api/.env` 另填 `DISCORD_BOT_TOKEN`(Bot 分頁)、`DISCORD_GUILD_ID`、`DISCORD_NOTIFY_CHANNEL_ID`。Bot 以 `bot` scope + 權限 **View Channels / Send Messages / Create Instant Invite**(整數 3073)邀進你的伺服器,無需 privileged intents。worker 會載入 `api/.env`,抓取後對「收藏且創本站新低」的遊戲在頻道 @ 提醒(未設定則略過);登入時以 `guilds.join` 自動把使用者加進伺服器。
 
+### 一次性 ITAD 史低 seed(選用)
+冷啟動時「史低」只是第一次觀測值。可用 [IsThereAnyDeal](https://isthereanydeal.com/apps/) 的 **API Key**(`api/.env` 的 `ITAD_API_KEY`,**不是** OAuth Client Secret)一次性補上真實 Steam 史低(台灣區、台幣)。腳本只更新 `game_stats` 的 `seeded_low_cents` 與(必要時)`observed_low_cents` / `observed_low_at`,**不會**往 `price_history` 補歷史價格點(走勢曲線仍隨時間累積)。
+
+```bash
+# 0) 先確保 game_stats 已有資料(跑過一次 worker)
+npm -w @ssc/worker run run
+
+# 1) 只查不寫,驗證 country=TW 回 TWD、解析正確(建議先跑)
+npm -w @ssc/worker run seed -- --check
+
+# 2) 實際寫入(idempotent,可重跑)
+npm -w @ssc/worker run seed
+
+# 3) 重烤 JSON,讓 deals.json 反映新史低與 isAtObservedLow
+npm -w @ssc/worker run run
+```
+
+腳本對 lookup/storelow 有重試退避,並印出幣別分布;非 TWD 會警示。**正式站**:本機 seed 只動本機 DB,production DB 在主機 Docker volume,需於主機 `docker compose exec worker npm -w @ssc/worker run seed`(`api/.env` 含 `ITAD_API_KEY`)後等下一輪 worker 重烤。
+
 ## 資料來源與歸屬
 - **Steam 商店端點**(`featuredcategories` / `appdetails` / 特價搜尋,免金鑰,台灣區 `cc=tw`):特價清單、台幣價、封面圖、熱銷排序。
 - **GamerPower API**(免金鑰):永久入庫免費遊戲/DLC。**站內保留可點擊連結回 GamerPower.com**。
