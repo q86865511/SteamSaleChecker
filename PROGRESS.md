@@ -1,10 +1,14 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-公開站 + Discord 帳號/願望清單已在 GitHub `main`。**Discord 降價通知**(Plan 3,分支 `feat/discord-notify`)程式已完成、35 測試綠、無設定時優雅略過;只剩**使用者提供 bot token + guild/channel id 後做一次真實通知測試** + 開 PR。
+三個子系統(公開站 / 帳號收藏 / 降價通知)都在 GitHub `main`,且已 **live 真機驗證**:真實 Discord 登入(`guilds.join` 自動入伺服器)、bot 在頻道 @使用者 的降價通知、去重防轟炸皆正常。另在 `feat/bot-presence` 分支加了 **bot 上線(Gateway presence)**(api 在跑時 bot 顯示綠燈)。下一步:部署(Plan 4)。
 
 ## 已完成
-- **2026-06-25:Discord 降價通知(Plan 3,分支 `feat/discord-notify`,待 PR)**
+- **2026-06-25:live 真機驗證 + bot 上線**
+  - 用真實帳號 `ye_ye8555` 跑通:Discord 登入 → ★ 收藏(Cyberpunk、潛水員戴夫)→ bot @你 降價通知 2/2 送出 → 再跑去重變 0(防轟炸)。
+  - Plan 2(登入/收藏)與 Plan 3(通知)皆 live 驗證通過。
+  - `feat/bot-presence` 分支:api 啟動時用 discord.js 連 Gateway,bot 顯示**上線**(Watching Steam 特價);`ready` 事件 v15 要改 `clientReady`(目前 v14 仍可、僅 deprecation 警告)。
+- **2026-06-25:Discord 降價通知(Plan 3,PR #3 已 merge)**
   - worker db 加 `notifications` 表 + `getWishersForApp`/`alreadyNotified`/`markNotified`(TDD)。
   - `discord-bot.ts`:`formatNotifyMessage`(TDD)+ `postChannelMessage`(REST,`allowed_mentions` 只 parse users)。
   - `notify.ts`:`collectPending`(找收藏者、去重)+ `dispatchNotifications`(成功才標記、失敗下次重試)。
