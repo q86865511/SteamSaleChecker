@@ -12,7 +12,6 @@
   <meta property="og:title" content="Steam 特價追蹤" />
   <meta property="og:description" content="Steam 熱銷特價與免費領取,本站自建價格歷史" />
   <meta property="og:url" content="https://steam.terrychou.com/" />
-  <meta property="og:image" content="https://steam.terrychou.com/favicon.svg" />
   <meta name="twitter:card" content="summary" />
   <title>Steam 特價追蹤</title>
   <style is:global>
@@ -131,10 +130,13 @@
     .countdown{color:var(--low-fg);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px}
     .countdown.ended{color:var(--muted)}
     .filter-ctl{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
-    .filter-ctl input[type=number]{width:74px}
+    .filter-ctl input[type=number]{width:84px;background:var(--ctl-bg);color:var(--ctl-text);
+      border:1px solid var(--ctl-border);border-radius:8px;padding:6px 8px;font-size:13px}
+    .filter-ctl input[type=number]:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
     .gear-link{display:inline-flex;align-items:center;text-decoration:none;font-size:16px;
       background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
     .gear-link:hover{border-color:var(--accent)}
+    .gear-link:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
   </style>
 </head>
 <body>
