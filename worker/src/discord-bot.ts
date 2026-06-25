@@ -13,7 +13,8 @@ export function formatGiveawayMessage(g: {
   const worth = g.worth_usd ? `(價值 ${g.worth_usd})` : '';
   const end = g.end_date ? `,${g.end_date.slice(0, 10)} 前領取` : '';
   const kind = g.type === 'dlc' ? '免費 DLC' : '免費遊戲';
-  return `🆓 ${kind}:**${g.title}**${worth}${plats ? ` — ${plats}` : ''}${end}\n${g.url}`;
+  const link = /^https?:\/\//i.test(g.url) ? `\n${g.url}` : ''; // 只放 http(s) 連結
+  return `🆓 ${kind}:**${g.title}**${worth}${plats ? ` — ${plats}` : ''}${end}${link}`;
 }
 
 // 特價精選摘要(每日/每週報告);依折扣高→低取 TopN;空回 null。
@@ -26,11 +27,15 @@ export function formatDigest(
   return `📊 Steam 特價精選 Top ${top.length}\n${lines.join('\n')}\nhttps://steam.terrychou.com/`;
 }
 
-export async function postChannelMessage(botToken: string, channelId: string, content: string): Promise<void> {
+// allowMentions 預設 false:頻道公告(免費/摘要)不解析任何 mention,避免被外部標題注入 <@id> 觸發 ping。
+// 僅個人降價通知(formatNotifyMessage,含 <@discordId>)需傳 true。
+export async function postChannelMessage(
+  botToken: string, channelId: string, content: string, allowMentions = false,
+): Promise<void> {
   const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, allowed_mentions: { parse: ['users'] } }),
+    body: JSON.stringify({ content, allowed_mentions: allowMentions ? { parse: ['users'] } : { parse: [] } }),
   });
   if (!res.ok) throw new Error(`discord post ${res.status}`);
 }

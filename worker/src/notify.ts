@@ -24,7 +24,7 @@ export async function dispatchNotifications(
   for (const p of pending) {
     try {
       await postChannelMessage(botToken, channelId,
-        formatNotifyMessage({ discordId: p.discordId, name: p.name, lowCents: p.lowCents, appid: p.appid }));
+        formatNotifyMessage({ discordId: p.discordId, name: p.name, lowCents: p.lowCents, appid: p.appid }), true);
       markNotified(db, p.userId, p.appid, p.lowCents, nowSec);
       sent++;
     } catch (e) {

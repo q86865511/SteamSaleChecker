@@ -12,12 +12,14 @@ export async function syncAndNotifyGiveaways(
   const seed = giveawayCount(db) === 0;
   for (const g of free) recordGiveaway(db, g, now, seed);
   if (seed) { console.log(`免費領取:首輪建立基線 ${free.length} 筆(不通知)`); return 0; }
+  const MAX_PER_RUN = 8; // 每輪上限,避免 Discord 速率;其餘 backlog(含先前失敗者)下輪續發
   let sent = 0;
-  for (const g of pendingGiveaways(db)) {
+  for (const g of pendingGiveaways(db).slice(0, MAX_PER_RUN)) {
     try {
       await postChannelMessage(botToken, channelId, formatGiveawayMessage(g));
       markGiveawayNotified(db, g.id, now);
       sent++;
+      await new Promise(r => setTimeout(r, 1200)); // 尊重頻道速率(~5 則/5 秒)
     } catch (e) {
       console.warn('免費領取通知失敗', g.id, e instanceof Error ? e.message : e);
     }
