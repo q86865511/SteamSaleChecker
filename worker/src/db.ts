@@ -61,6 +61,11 @@ export function getPriceHistory(db: DB, appid: number): PricePoint[] {
     `SELECT observed_at AS t, price_cents AS price FROM price_history WHERE appid = ? ORDER BY observed_at ASC`,
   ).all(appid) as PricePoint[];
 }
+// 長存表清理:刪除早於保留天數的價格點(史低存於 game_stats,不受影響);回刪除筆數。
+export function prunePriceHistory(db: DB, keepDays: number, now: number): number {
+  const cutoff = now - keepDays * 86400;
+  return db.prepare('DELETE FROM price_history WHERE observed_at < ?').run(cutoff).changes;
+}
 export function recordPriceAndLow(
   db: DB, appid: number, observedAt: number, priceCents: number, discountPercent: number,
 ): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePlatforms, toFreeGiveaway, keepForeverGame, RawGiveaway } from './gamerpower-parse';
+import { parsePlatforms, toFreeGiveaway, keepForeverGame, isSteamGiveaway, RawGiveaway } from './gamerpower-parse';
 const perpetual: RawGiveaway = {
   id: 2840, title: 'Fallout 76', worth: '$39.99', image: 'http://img/f76.jpg', thumbnail: '',
   open_giveaway_url: 'http://gp/2840', type: 'Game', platforms: 'PC, Epic Games Store',
@@ -21,9 +21,16 @@ describe('gamerpower-parse', () => {
   it('有期限的領取 endDate 保留', () => {
     expect(toFreeGiveaway(dlc).endDate).toBe('2026-07-01 23:59:59');
   });
-  it('keepForeverGame:只收 Game/DLC 且 Active,排除 Beta', () => {
-    expect(keepForeverGame(perpetual)).toBe(true);
-    expect(keepForeverGame(dlc)).toBe(true);
-    expect(keepForeverGame(beta)).toBe(false);
+  it('isSteamGiveaway:平台含 Steam 才算', () => {
+    expect(isSteamGiveaway('PC, Steam, Epic Games Store')).toBe(true);
+    expect(isSteamGiveaway('Steam')).toBe(true);
+    expect(isSteamGiveaway('Epic Games Store, GOG')).toBe(false);
+    expect(isSteamGiveaway('')).toBe(false);
+  });
+  it('keepForeverGame:只收 Steam 的 Game/DLC 且 Active(排除 Beta 與非 Steam)', () => {
+    expect(keepForeverGame({ ...perpetual, platforms: 'PC, Steam' })).toBe(true);
+    expect(keepForeverGame({ ...dlc, platforms: 'Steam' })).toBe(true);
+    expect(keepForeverGame({ ...beta, platforms: 'Steam' })).toBe(false); // Beta 排除
+    expect(keepForeverGame(perpetual)).toBe(false); // Epic-only 非 Steam → 排除
   });
 });

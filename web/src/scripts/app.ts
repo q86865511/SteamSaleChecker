@@ -60,7 +60,7 @@ function dealCard(d: Deal, t: Dict, wished: boolean): string {
         ${reviewCell(d)}
         <span style="margin-left:auto">${sparkCell(d)}</span>
       </div>
-      <div class="row">${low}${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" style="margin-left:auto" aria-hidden="true"></span>` : ''}</div>
+      <div class="row">${low}${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" style="margin-left:auto" aria-hidden="true"></span>` : `<span class="muted small" style="margin-left:auto">${esc(t.onSaleNoEnd)}</span>`}</div>
     </div>
   </article>`;
 }
@@ -91,7 +91,7 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
       <td class="col-trend">${sparkCell(d)}</td>
       <td class="col-status">${status}</td>
       <td class="col-when">${esc(fmtLowDate(d.observedLowAt))}</td>
-      <td class="col-when">${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" aria-hidden="true"></span>` : ''}</td>
+      <td class="col-when">${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" aria-hidden="true"></span>` : `<span class="muted small">${esc(t.onSaleNoEnd)}</span>`}</td>
       <td class="col-review">${reviewCell(d)}</td>
       <td class="col-star"><button class="wish-btn${wished ? ' on' : ''}" data-appid="${d.appid}" aria-label="${esc(t.wishlist)}" aria-pressed="${wished}">★</button></td>
     </tr>`;

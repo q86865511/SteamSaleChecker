@@ -2,11 +2,35 @@ import { initTheme, setTheme, storeTheme, storedThemeChoice } from './theme';
 import { resolveTheme, type Theme, type ViewMode } from './view';
 import { getLang, dict, applyI18n } from './i18n';
 
-function markActive(groupId: string, attr: string, value: string): void {
+// 單選 radiogroup:標記選中(aria-checked + roving tabindex);.on 供樣式。
+function markRadio(groupId: string, attr: string, value: string): void {
   document.querySelectorAll<HTMLButtonElement>(`#${groupId} .seg-btn`).forEach(b => {
     const on = b.getAttribute(attr) === value;
     b.classList.toggle('on', on);
-    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-checked', String(on));
+    b.tabIndex = on ? 0 : -1;
+  });
+}
+
+// 接上點擊 + 方向鍵(WAI-ARIA radiogroup);選擇時呼叫 onChoose(value)。
+function wireRadioGroup(groupId: string, attr: string, onChoose: (value: string) => void): void {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const choose = (b: HTMLButtonElement | null): void => { if (b) onChoose(b.getAttribute(attr) ?? ''); };
+  group.addEventListener('click', (e) => choose((e.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn')));
+  group.addEventListener('keydown', (e) => {
+    const list = [...group.querySelectorAll<HTMLButtonElement>('.seg-btn')];
+    const i = list.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0) return;
+    let j = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % list.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + list.length) % list.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = list.length - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    list[j].focus();
+    choose(list[j]);
   });
 }
 
@@ -16,33 +40,25 @@ export function bootSettings(): void {
   document.documentElement.lang = lang;
   applyI18n(dict());
 
-  markActive('theme-seg', 'data-theme-choice', storedThemeChoice());
-  markActive('lang-seg', 'data-lang-choice', lang);
-  markActive('view-seg', 'data-view-choice', localStorage.getItem('ssc-view') === 'card' ? 'card' : 'list');
+  markRadio('theme-seg', 'data-theme-choice', storedThemeChoice());
+  markRadio('lang-seg', 'data-lang-choice', lang);
+  markRadio('view-seg', 'data-view-choice', localStorage.getItem('ssc-view') === 'card' ? 'card' : 'list');
 
-  document.getElementById('theme-seg')?.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
-    if (!b) return;
-    const choice = b.dataset.themeChoice as Theme | 'system';
-    storeTheme(choice);
-    setTheme(choice === 'system'
+  wireRadioGroup('theme-seg', 'data-theme-choice', (choice) => {
+    const c = choice as Theme | 'system';
+    storeTheme(c);
+    setTheme(c === 'system'
       ? resolveTheme(null, window.matchMedia('(prefers-color-scheme: dark)').matches)
-      : choice);
-    markActive('theme-seg', 'data-theme-choice', choice);
+      : c);
+    markRadio('theme-seg', 'data-theme-choice', c);
   });
 
-  document.getElementById('lang-seg')?.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
-    if (!b) return;
-    const choice = b.dataset.langChoice as 'zh-TW' | 'en';
+  wireRadioGroup('lang-seg', 'data-lang-choice', (choice) => {
     if (choice !== lang) { localStorage.setItem('ssc-lang', choice); location.reload(); }
   });
 
-  document.getElementById('view-seg')?.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.seg-btn');
-    if (!b) return;
-    const choice = b.dataset.viewChoice as ViewMode;
+  wireRadioGroup('view-seg', 'data-view-choice', (choice) => {
     localStorage.setItem('ssc-view', choice); // 套用於特價頁
-    markActive('view-seg', 'data-view-choice', choice);
+    markRadio('view-seg', 'data-view-choice', choice);
   });
 }

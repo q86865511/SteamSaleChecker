@@ -55,7 +55,7 @@ export async function bootGame(): Promise<void> {
           ${d.discountPercent > 0 ? `<span class="badge badge-disc">-${d.discountPercent}%</span>` : ''}
           <span class="price">${twd(d.priceCents)}</span>
           ${d.regularCents !== d.priceCents ? `<span class="was">${twd(d.regularCents)}</span>` : ''}
-          ${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" aria-hidden="true"></span>` : ''}
+          ${d.discountExpiration ? `<span class="countdown" data-exp="${d.discountExpiration}" aria-hidden="true"></span>` : (d.discountPercent > 0 ? `<span class="muted small">${esc(t.onSaleNoEnd)}</span>` : '')}
         </div>
         ${rev && rev.total ? `<p class="muted small">${esc(t.colReview)}:${esc(rev.scoreDesc)} 👍${rev.positivePct}% (${rev.total.toLocaleString('en-US')})</p>` : ''}
         ${lowLine ? `<p class="muted small">${lowLine}</p>` : ''}

@@ -4,6 +4,14 @@
 **已正式上線:https://steam.terrychou.com** —— Oracle 主機上 Docker(api:8788 + worker)+ Caddy(`steam.terrychou.com` 站)+ Cloudflare Tunnel,完全貼合既有 soulshard 架構;terrychou.com / soulshard 不受影響。線上有 119 筆特價 + 11 免費、Discord 登入(prod redirect)、bot 上線、降價通知皆通。剩 CI/CD 自動部署(GitHub Actions ssh-action)merge 後驗證。
 
 ## 已完成
+- **2026-06-26:小尾巴 + 2 bug(`feat/polish-fixes`,待 PR;R5 批次第 3 棒,疊在 b5 上)**
+  - **倒數誠實標示**(bug):已查證 `appdetails`/商店頁/`featuredcategories` 後,熱銷搜尋來的多數特價無公告結束日(無便宜來源可補);無 `discountExpiration` 者改顯示「特價中」而非空白(列表/卡片/詳細頁),i18n `onSaleNoEnd`。
+  - **免費只看 Steam**(bug):純函式 `isSteamGiveaway` + `keepForeverGame` 加平台過濾(TDD);bake 即過濾,實測 free 11→1(只剩 Steam)。
+  - **長存表清理**:`prunePriceHistory`(TDD,史低存 game_stats 不受影響)+ pipeline 修剪 + env `SSC_HISTORY_KEEP_DAYS`(預設 365)。
+  - **設定頁 radiogroup**(a11y):主題/語言/檢視由 `role=group`+`aria-pressed` 改為 `role=radiogroup`+`role=radio`+`aria-checked`+roving tabindex + 方向鍵(可重用於 PR4 通知設定);Preview 實測鍵盤切換通過。
+  - **PWA PNG + OG 圖**:`web/scripts/gen-icons.mjs`(sharp 柵格化)產 icon-192/512.png + og-image.png(1200×630),manifest icons + Base.astro head(og:image/twitter summary_large_image/apple-touch-icon)。
+  - **刪 `.modal-*` 死 CSS**(圖表 modal 已被 /game 取代,全無引用)。
+  - **132 測試**綠、四 workspace tsc 乾淨、build 4 頁;Preview 實測倒數標示(7 倒數/8「特價中」)、radiogroup 鍵盤、head OG、無 console 錯誤。
 - **2026-06-25:B-5 目標價(`feat/b5-target-price`,待 PR;R5 批次第 2 棒,疊在 b4 上)**
   - `wishlist` 加 `target_low_cents` 欄(worker+api 雙端 `addColumnIfMissing` 遷移,NULL=未設)。
   - 純函式 `shouldNotifyNewLow`(TDD):類型白名單無交集→不發;設目標→命中(low≤target)才發 `target`(覆蓋 drop,設目標就只看目標);否則看 `dropEnabled`。`collectPending` 改用之(此 PR drop 預設開、genres 預設空,prefs 留 PR4)。

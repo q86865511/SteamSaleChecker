@@ -17,5 +17,9 @@ export const toFreeGiveaway = (g: RawGiveaway): FreeGiveaway => ({
   type: g.type,
 });
 const KEEP_TYPES = new Set(['game', 'dlc']);
+// 平台字串(CSV)是否含 Steam(Steam 原生或 Steam 序號;GamerPower 平台標準名)
+export const isSteamGiveaway = (platforms: string): boolean =>
+  parsePlatforms(platforms).some(p => p.toLowerCase().includes('steam'));
+// 只收「Steam 的永久 Game/DLC 且 Active」(排除 Beta、試玩、非 Steam 平台)
 export const keepForeverGame = (g: RawGiveaway): boolean =>
-  g.status?.toLowerCase() === 'active' && KEEP_TYPES.has(g.type?.toLowerCase());
+  g.status?.toLowerCase() === 'active' && KEEP_TYPES.has(g.type?.toLowerCase()) && isSteamGiveaway(g.platforms ?? '');

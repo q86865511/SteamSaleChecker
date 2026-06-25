@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
   giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
   upsertReview, getReview, reviewedAt, markReviewChecked, upsertGame, gamesIndex,
-  replaceGameGenres, getGenresForApp, allGenres } from './db';
+  replaceGameGenres, getGenresForApp, allGenres, prunePriceHistory } from './db';
 import type { FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
@@ -102,6 +102,24 @@ describe('game_reviews', () => {
     markReviewChecked(db, 21, 5000);
     expect(getReview(db, 21)?.positivePct).toBe(80);
     expect(reviewedAt(db, 21)).toBe(5000);
+  });
+});
+
+describe('prunePriceHistory(長存表清理)', () => {
+  const now = 1000 * 86400;
+  it('刪除早於保留天數的點、回刪除數;近期保留', () => {
+    const db = openDb(':memory:');
+    recordPriceAndLow(db, 1, now - 400 * 86400, 50000, 0); // 早於 365 天
+    recordPriceAndLow(db, 1, now - 10 * 86400, 40000, 20); // 近期
+    expect(prunePriceHistory(db, 365, now)).toBe(1);
+    expect(getPriceHistory(db, 1).map(p => p.t)).toEqual([now - 10 * 86400]);
+  });
+  it('史低不受修剪影響(存於 game_stats)', () => {
+    const db = openDb(':memory:');
+    recordPriceAndLow(db, 1, now - 400 * 86400, 30000, 50); // 舊史低
+    recordPriceAndLow(db, 1, now - 10 * 86400, 50000, 10);
+    prunePriceHistory(db, 365, now);
+    expect(getStats(db, 1)?.observed_low_cents).toBe(30000);
   });
 });
 

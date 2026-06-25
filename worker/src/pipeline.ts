@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import type { DB } from './db';
-import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked, upsertGame, gamesIndex, replaceGameGenres, allGenres } from './db';
+import { recordPriceAndLow, getStats, getPriceHistory, getReview, reviewedAt, upsertReview, markReviewChecked, upsertGame, gamesIndex, replaceGameGenres, allGenres, prunePriceHistory } from './db';
 import { fetchFeatured, enrichMany, fetchTopSellerSpecialAppids, fetchReviewSummary } from './sources/steam';
 import { fetchFreeGiveaways } from './sources/gamerpower';
 import { writeJsonAtomic } from './bake';
@@ -14,7 +14,7 @@ import type { NewLow } from './notify';
 export interface RunResult { deals: Deal[]; free: FreeGiveaway[]; meta: Meta; newLows: NewLow[]; }
 
 export async function runPipeline(
-  db: DB, dataDir: string, nowSec: number, trackingSince: number, dealLimit = 120,
+  db: DB, dataDir: string, nowSec: number, trackingSince: number, dealLimit = 120, historyKeepDays = 365,
 ): Promise<RunResult> {
   // 1. 探索:搜尋熱銷特價(銷量排序)為主;featured specials 提供倒數時間與 fallback
   const featured = await fetchFeatured();
@@ -83,6 +83,9 @@ export async function runPipeline(
 
   // 4. 免費領取
   const free = await fetchFreeGiveaways();
+
+  // 4b. 長存表清理:修剪過舊的 price_history(史低存於 game_stats,不受影響)
+  if (historyKeepDays > 0) prunePriceHistory(db, historyKeepDays, nowSec);
 
   // 5. 烤 JSON
   const meta: Meta = { generatedAt: nowSec, trackingSince, dealCount: deals.length, freeCount: free.length, ok: true };

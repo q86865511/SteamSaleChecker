@@ -17,6 +17,7 @@ const envOr = (v: string | undefined, fallback: string): string => (v && v.lengt
 const DATA_DIR = envOr(process.env.SSC_DATA_DIR, join(REPO_ROOT, 'web', 'public', 'data'));
 const DB_PATH = envOr(process.env.SSC_DB, join(REPO_ROOT, 'data', 'steam.db'));
 const DEAL_LIMIT = Number(envOr(process.env.SSC_DEAL_LIMIT, '120')) || 120;
+const HISTORY_KEEP_DAYS = Number(envOr(process.env.SSC_HISTORY_KEEP_DAYS, '365'));
 
 const main = async () => {
   const now = Math.floor(Date.now() / 1000);
@@ -29,7 +30,8 @@ const main = async () => {
     try { trackingSince = (JSON.parse(readFileSync(metaPath, 'utf8')) as Meta).trackingSince ?? now; } catch {}
   }
   try {
-    const { deals, free, meta, newLows } = await runPipeline(db, DATA_DIR, now, trackingSince, DEAL_LIMIT);
+    const keepDays = Number.isFinite(HISTORY_KEEP_DAYS) ? HISTORY_KEEP_DAYS : 365;
+    const { deals, free, meta, newLows } = await runPipeline(db, DATA_DIR, now, trackingSince, DEAL_LIMIT, keepDays);
     console.log(`OK deals=${meta.dealCount} free=${meta.freeCount}`);
     const botToken = process.env.DISCORD_BOT_TOKEN;
     const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;

@@ -6,13 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Steam 特價追蹤 — 熱銷特價與免費領取,本站自建價格歷史" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0e1622" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Steam 特價追蹤" />
   <meta property="og:description" content="Steam 熱銷特價與免費領取,本站自建價格歷史" />
   <meta property="og:url" content="https://steam.terrychou.com/" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://steam.terrychou.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://steam.terrychou.com/og-image.png" />
   <title>Steam 特價追蹤</title>
   <style is:global>
     :root{
@@ -61,17 +67,6 @@
       border-top:1px solid var(--line);color:var(--muted);font-size:12px}
     .card.clickable{cursor:pointer;transition:border-color .12s}
     .card.clickable:hover{border-color:var(--accent)}
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;
-      align-items:center;justify-content:center;padding:16px;z-index:50}
-    .modal-overlay[hidden]{display:none}
-    .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
-      width:min(640px,100%);padding:16px 18px}
-    .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .modal-title{color:var(--heading);font-weight:500;margin:0}
-    .modal-close{background:transparent;color:var(--muted);border:0;font-size:18px;cursor:pointer;line-height:1}
-    .modal-close:hover{color:var(--heading)}
-    .modal-body{min-height:120px}
-    .modal-body .uplot{margin:0 auto}
     .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
     .title-row .card-title{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .wish-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0;flex:none}
