@@ -27,7 +27,9 @@ export async function dispatchNotifications(
         formatNotifyMessage({ discordId: p.discordId, name: p.name, lowCents: p.lowCents, appid: p.appid }));
       markNotified(db, p.userId, p.appid, p.lowCents, nowSec);
       sent++;
-    } catch { /* 失敗不標記,下次重試 */ }
+    } catch (e) {
+      console.warn(`通知發送失敗 user=${p.userId} app=${p.appid}:`, e);
+    }
   }
   return sent;
 }
