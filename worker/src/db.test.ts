@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp, alreadyNotified, markNotified,
   giveawayCount, recordGiveaway, pendingGiveaways, markGiveawayNotified, lastReportSent, recordReportSent,
+  getGiveawayAppid, setGiveawayAppid, getGameBasics,
   upsertReview, getReview, reviewedAt, markReviewChecked, upsertGame, gamesIndex,
   replaceGameGenres, getGenresForApp, allGenres, prunePriceHistory,
   getNotifPrefsForUser, usersWantingFree, freeAlreadySent, markFreeSent,
@@ -66,6 +67,33 @@ describe('免費領取通知狀態', () => {
     recordGiveaway(db, gw('a'), 2000, false);
     expect(giveawayCount(db)).toBe(1);
     expect(pendingGiveaways(db)).toHaveLength(1);
+  });
+});
+
+describe('免費領取 appid 快取', () => {
+  it('未解析回 null;設定後讀回;不存在的 id 不炸', () => {
+    const db = openDb(':memory:');
+    recordGiveaway(db, gw('a'), 1000, false);
+    expect(getGiveawayAppid(db, 'a')).toBeNull(); // 尚未解析(欄為 NULL)
+    setGiveawayAppid(db, 'a', 871550);
+    expect(getGiveawayAppid(db, 'a')).toBe(871550);
+    setGiveawayAppid(db, 'nope', 0); // UPDATE 影響 0 列,不報錯
+    expect(getGiveawayAppid(db, 'nope')).toBeNull();
+  });
+  it('0 哨兵(查過無對應)與 null(未查)可區分', () => {
+    const db = openDb(':memory:');
+    recordGiveaway(db, gw('a'), 1000, false);
+    setGiveawayAppid(db, 'a', 0);
+    expect(getGiveawayAppid(db, 'a')).toBe(0);
+  });
+});
+
+describe('getGameBasics', () => {
+  it('回 header 與原價;無則 undefined', () => {
+    const db = openDb(':memory:');
+    upsertGame(db, 10, 'Game A', 'a.jpg', 200000, false, 1000);
+    expect(getGameBasics(db, 10)).toEqual({ headerImage: 'a.jpg', regularCents: 200000 });
+    expect(getGameBasics(db, 99)).toBeUndefined();
   });
 });
 

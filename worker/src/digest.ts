@@ -1,7 +1,8 @@
 import type { DB } from './db';
 import { lastReportSent, recordReportSent, usersWantingDigest, lastPersonalDigest, recordPersonalDigest, getGenresForApp, getNotifPrefsForUser } from './db';
 import { shouldRefresh } from './seed/itad';
-import { formatDigest, postChannelMessage, sendDm } from './discord-bot';
+import { postChannelMessage, sendDm } from './discord-bot';
+import { buildDigestEmbed } from './embeds';
 import type { Deal } from '@ssc/shared';
 
 // 依使用者類型白名單過濾 deals(空白名單=不限)。純函式。
@@ -19,9 +20,9 @@ export async function maybeSendDigest(
 ): Promise<boolean> {
   if (intervalSec <= 0) return false;
   if (!shouldRefresh(lastReportSent(db, 'digest'), now, intervalSec)) return false;
-  const msg = formatDigest(deals, topN);
-  if (!msg) { recordReportSent(db, 'digest', now); return false; }
-  await postChannelMessage(botToken, channelId, msg);
+  const payload = buildDigestEmbed(deals, topN);
+  if (!payload) { recordReportSent(db, 'digest', now); return false; }
+  await postChannelMessage(botToken, channelId, payload);
   recordReportSent(db, 'digest', now);
   return true;
 }
@@ -39,11 +40,11 @@ export async function maybeSendPersonalDigests(
   for (const r of recipients) {
     if (!shouldRefresh(lastPersonalDigest(db, r.userId), now, r.digestHours * 3600)) continue;
     const prefs = getNotifPrefsForUser(db, r.userId);
-    const msg = formatDigest(filterDealsByGenres(deals, prefs.genres, genresByApp), topN);
-    if (!msg) { recordPersonalDigest(db, r.userId, now); continue; }
+    const payload = buildDigestEmbed(filterDealsByGenres(deals, prefs.genres, genresByApp), topN, { mention: r.discordId });
+    if (!payload) { recordPersonalDigest(db, r.userId, now); continue; }
     try {
-      if (r.delivery === 'dm') await sendDm(botToken, r.discordId, msg);
-      else await postChannelMessage(botToken, channelId, `<@${r.discordId}>\n${msg}`, true);
+      if (r.delivery === 'dm') await sendDm(botToken, r.discordId, payload);
+      else await postChannelMessage(botToken, channelId, payload, true);
       recordPersonalDigest(db, r.userId, now);
       sent++;
       await new Promise(res => setTimeout(res, 1200));

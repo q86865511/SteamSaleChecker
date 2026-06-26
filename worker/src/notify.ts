@@ -1,6 +1,7 @@
 import type { DB } from './db';
-import { getWishersForApp, getGenresForApp, getNotifPrefsForUser, alreadyNotified, markNotified } from './db';
-import { formatNotifyMessage, postChannelMessage, sendDm } from './discord-bot';
+import { getWishersForApp, getGenresForApp, getNotifPrefsForUser, alreadyNotified, markNotified, getGameBasics, getReview } from './db';
+import { postChannelMessage, sendDm } from './discord-bot';
+import { buildDropEmbed } from './embeds';
 import type { NotifDelivery } from '@ssc/shared';
 
 export interface NewLow { appid: number; name: string; lowCents: number; }
@@ -54,9 +55,15 @@ export async function dispatchNotifications(
   let sent = 0;
   for (const p of pending) {
     try {
-      const content = formatNotifyMessage({ discordId: p.discordId, name: p.name, lowCents: p.lowCents, appid: p.appid, reason: p.reason });
-      if (p.delivery === 'dm') await sendDm(botToken, p.discordId, content);
-      else await postChannelMessage(botToken, channelId, content, true);
+      // 補強(本輪在特價者必在 games / game_reviews 快取):原價、封面、評價。
+      const basics = getGameBasics(db, p.appid);
+      const payload = buildDropEmbed({
+        discordId: p.discordId, name: p.name, appid: p.appid, lowCents: p.lowCents, reason: p.reason,
+        regularCents: basics?.regularCents ?? null, headerImage: basics?.headerImage ?? null,
+        review: getReview(db, p.appid) ?? null,
+      });
+      if (p.delivery === 'dm') await sendDm(botToken, p.discordId, payload);
+      else await postChannelMessage(botToken, channelId, payload, true);
       markNotified(db, p.userId, p.appid, p.lowCents, nowSec);
       sent++;
     } catch (e) {

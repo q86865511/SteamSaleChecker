@@ -47,6 +47,8 @@ export function openDb(path: string): DB {
   addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
   addColumnIfMissing(db, 'free_giveaways', 'notified', 'INTEGER DEFAULT 0');
   addColumnIfMissing(db, 'free_giveaways', 'notified_at', 'INTEGER');
+  // 免費領取對應的 Steam appid 快取(embed 完整版補強用):NULL=未解析、0=查過無對應、>0=appid
+  addColumnIfMissing(db, 'free_giveaways', 'appid', 'INTEGER');
   // 遷移:wishlist 加每款目標價(NULL=未設);worker 通知時讀取
   addColumnIfMissing(db, 'wishlist', 'target_low_cents', 'INTEGER');
   return db;
@@ -128,13 +130,22 @@ export function recordGiveaway(db: DB, g: FreeGiveaway, now: number, seedNotifie
     });
 }
 export interface PendingGiveaway {
-  id: string; title: string; url: string; type: string; platforms: string; end_date: string | null; worth_usd: string | null;
+  id: string; title: string; url: string; type: string; platforms: string;
+  end_date: string | null; worth_usd: string | null; image: string | null;
 }
 export function pendingGiveaways(db: DB): PendingGiveaway[] {
-  return db.prepare('SELECT id,title,url,type,platforms,end_date,worth_usd FROM free_giveaways WHERE notified=0').all() as PendingGiveaway[];
+  return db.prepare('SELECT id,title,url,type,platforms,end_date,worth_usd,image FROM free_giveaways WHERE notified=0').all() as PendingGiveaway[];
 }
 export function markGiveawayNotified(db: DB, id: string, now: number): void {
   db.prepare('UPDATE free_giveaways SET notified=1, notified_at=@now WHERE id=@id').run({ id, now });
+}
+// 免費領取的 Steam appid 快取。回 null=未解析(欄為 NULL 或無此列);0=查過無對應;>0=appid。
+export function getGiveawayAppid(db: DB, id: string): number | null {
+  const r = db.prepare('SELECT appid FROM free_giveaways WHERE id = ?').get(id) as { appid: number | null } | undefined;
+  return r && r.appid != null ? r.appid : null;
+}
+export function setGiveawayAppid(db: DB, id: string, appid: number): void {
+  db.prepare('UPDATE free_giveaways SET appid = ? WHERE id = ?').run(appid, id);
 }
 
 // --- 通知偏好(per-user;worker 端讀取以決定對誰、用什麼方式發)---
@@ -211,6 +222,12 @@ export function upsertGame(db: DB, appid: number, nameZh: string, headerImage: s
     VALUES(@a,@n,@h,@r,@f,@now,@now)
     ON CONFLICT(appid) DO UPDATE SET name_zh=@n, header_image=@h, regular_price_cents=@r, is_free=@f, last_seen=@now`)
     .run({ a: appid, n: nameZh, h: headerImage, r: regularCents, f: isFree ? 1 : 0, now });
+}
+// 降價 embed 補強:讀某 app 的封面與原價(games 表;本輪在特價者必有)。
+export interface GameBasics { headerImage: string; regularCents: number; }
+export function getGameBasics(db: DB, appid: number): GameBasics | undefined {
+  return db.prepare('SELECT header_image AS headerImage, regular_price_cents AS regularCents FROM games WHERE appid = ?')
+    .get(appid) as GameBasics | undefined;
 }
 export interface GameIndexEntry { appid: number; nameZh: string; headerImage: string; observedLowCents: number | null; observedLowAt: number | null; }
 export function gamesIndex(db: DB): GameIndexEntry[] {

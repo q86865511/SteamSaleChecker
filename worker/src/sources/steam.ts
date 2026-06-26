@@ -29,6 +29,25 @@ export async function enrichMany(appids: number[]): Promise<Map<number, ParsedAp
   return out;
 }
 
+// 標題正規化:小寫、NFKD 去重音、非英數字一律換空白、收斂空白。用於 giveaway 標題對 Steam app 名比對。
+const normTitle = (s: string): string =>
+  s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+// 用標題搜 Steam storesearch 解出 appid(GamerPower giveaway 不含 appid)。
+// 只在「正規化標題相等」才回該 appid,查無對應回 null(寧可退精簡版也不錯配)。
+// 抓取失敗會 throw(不吞),讓上層分辨「查詢失敗(下輪重試)」與「查無對應(快取 0)」。
+export async function searchSteamAppid(title: string): Promise<number | null> {
+  const q = normTitle(title);
+  if (!q) return null;
+  const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(title)}&cc=tw&l=tchinese`;
+  const j = await getJson(url);
+  const items = (j?.items ?? []) as { id?: number; name?: string }[];
+  for (const it of items) {
+    if (it?.id && normTitle(String(it.name ?? '')) === q) return Number(it.id);
+  }
+  return null;
+}
+
 // Steam 評論摘要(appreviews);失敗回 null。
 export async function fetchReviewSummary(appid: number): Promise<ReviewSummary | null> {
   const url = `https://store.steampowered.com/appreviews/${appid}?json=1&language=all&purchase_type=all&num_per_page=0&l=tchinese`;

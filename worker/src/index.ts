@@ -46,9 +46,11 @@ const main = async () => {
       console.log(`通知:${sent}/${pending.length} 已送`);
       // 免費領取通知(全域頻道公告)+ 個人免費通知 + 全域/個人摘要(失敗不影響主流程)
       try {
-        const gsent = await syncAndNotifyGiveaways(db, free, botToken, channelId, now);
+        // 本輪 appid→appdetails 快取:讓全域公告與個人免費對同款 giveaway 不重抓 appdetails
+        const appCache = new Map();
+        const gsent = await syncAndNotifyGiveaways(db, free, botToken, channelId, now, appCache);
         if (gsent) console.log(`免費領取通知:${gsent} 筆`);
-        const pfree = await collectAndSendPersonalFree(db, free, botToken, channelId, now);
+        const pfree = await collectAndSendPersonalFree(db, free, botToken, channelId, now, appCache);
         if (pfree) console.log(`個人免費通知:${pfree} 筆`);
         const digestHours = Number(envOr(process.env.SSC_DIGEST_HOURS, '0'));
         const digestSec = (Number.isFinite(digestHours) ? digestHours : 0) * 3600;
