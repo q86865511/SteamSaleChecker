@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 844 496" role="img" aria-labelledby="t d" font-family="sans-serif">
+  <title id="t">SteamSaleChecker 系統架構</title>
+  <desc id="d">Worker 定時抓取 Steam、GamerPower 與選配的 ITAD,寫入共用的 SQLite 並烘焙成靜態 JSON;Astro 靜態站以 client fetch 讀取 JSON 呈現;選配的 Fastify API 處理 Discord 登入、願望單與通知偏好,Discord Bot 派送降價、免費與摘要通知;以 Docker 部署於 Oracle Cloud,經 Caddy 與 Cloudflare Tunnel 對外,GitHub Actions 自動部署。</desc>
+  <defs>
+    <style>
+      text{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei','Hiragino Sans GB',sans-serif;}
+      .t{font-weight:700;}
+      .lbl{fill:#9aa7b4;font-size:11px;font-weight:600;paint-order:stroke;stroke:#0d1117;stroke-width:3px;stroke-linejoin:round;}
+    </style>
+    <marker id="ae" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#58a6ff"/></marker>
+    <marker id="as" markerWidth="9" markerHeight="9" refX="1" refY="4" orient="auto"><path d="M8,0 L0,4 L8,8 Z" fill="#58a6ff"/></marker>
+    <marker id="ne" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#6e7681"/></marker>
+    <marker id="ns" markerWidth="9" markerHeight="9" refX="1" refY="4" orient="auto"><path d="M8,0 L0,4 L8,8 Z" fill="#6e7681"/></marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="843" height="495" fill="#0d1117" stroke="#21262d"/>
+
+  <!-- header -->
+  <text x="28" y="35" class="t" font-size="16" fill="#e6edf3">SteamSaleChecker <tspan fill="#8b949e" font-weight="400" font-size="13">· 系統架構</tspan></text>
+  <rect x="560" y="23" width="13" height="13" rx="3" fill="#0f2233" stroke="#1f6feb"/>
+  <text x="579" y="33" font-size="11" fill="#8b949e">本站服務</text>
+  <rect x="664" y="23" width="13" height="13" rx="3" fill="#161b22" stroke="#30363d"/>
+  <text x="683" y="33" font-size="11" fill="#8b949e">外部服務</text>
+
+  <!-- arrows (drawn first, boxes on top) -->
+  <path d="M206,146 H250" fill="none" stroke="#6e7681" stroke-width="1.4" marker-end="url(#ne)"/>
+  <text x="228" y="139" class="lbl" text-anchor="middle">抓取</text>
+
+  <path d="M400,144 H444" fill="none" stroke="#58a6ff" stroke-width="1.4" marker-end="url(#ae)"/>
+  <text x="422" y="137" class="lbl" text-anchor="middle">烘焙</text>
+
+  <path d="M594,146 H640" fill="none" stroke="#58a6ff" stroke-width="1.4" marker-end="url(#ae)"/>
+  <text x="617" y="139" class="lbl" text-anchor="middle">靜態檔</text>
+
+  <path d="M312,184 V214 H519 V232" fill="none" stroke="#58a6ff" stroke-width="1.4" marker-end="url(#ae)"/>
+  <text x="372" y="208" class="lbl" text-anchor="middle">寫入</text>
+
+  <path d="M728,188 V356" fill="none" stroke="#6e7681" stroke-width="1.4" marker-start="url(#ns)" marker-end="url(#ne)"/>
+  <text x="728" y="276" class="lbl" text-anchor="middle">靜態檔 + JSON</text>
+
+  <path d="M640,390 H596" fill="none" stroke="#6e7681" stroke-width="1.4" marker-end="url(#ne)"/>
+  <text x="618" y="383" class="lbl" text-anchor="middle">登入</text>
+
+  <path d="M519,356 V308" fill="none" stroke="#58a6ff" stroke-width="1.4" marker-start="url(#as)" marker-end="url(#ae)"/>
+  <text x="519" y="334" class="lbl" text-anchor="middle">共用 DB</text>
+
+  <path d="M250,160 H224 V393 H250" fill="none" stroke="#6e7681" stroke-width="1.4" marker-end="url(#ne)"/>
+  <text x="224" y="252" class="lbl" text-anchor="middle">通知</text>
+
+  <!-- box 1: 資料來源 (external) -->
+  <rect x="28" y="92" width="178" height="104" rx="9" fill="#161b22" stroke="#30363d" stroke-width="1.3"/>
+  <text x="42" y="116" class="t" font-size="13" fill="#e6edf3">資料來源 · 外部 API</text>
+  <text x="42" y="139" font-size="10.5" fill="#8b949e">Steam 商店端點(cc=tw)</text>
+  <text x="42" y="160" font-size="10.5" fill="#8b949e">GamerPower(免費永久)</text>
+  <text x="42" y="181" font-size="10.5" fill="#8b949e">ITAD 史低(選配)</text>
+
+  <!-- box 2: Worker (ours) -->
+  <rect x="250" y="110" width="150" height="74" rx="9" fill="#0f2233" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="264" y="134" class="t" font-size="13" fill="#58a6ff">Worker</text>
+  <text x="264" y="155" font-size="10.5" fill="#c4d3e0">Node + TS · cron ~30m</text>
+  <text x="264" y="173" font-size="10.5" fill="#c4d3e0">抓取 → 寫入 → 烘焙</text>
+
+  <!-- box 3: 靜態 JSON (ours) -->
+  <rect x="444" y="104" width="150" height="84" rx="9" fill="#0f2233" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="458" y="128" class="t" font-size="13" fill="#58a6ff">靜態 JSON</text>
+  <text x="458" y="149" font-size="10.5" fill="#c4d3e0">deals · free · meta</text>
+  <text x="458" y="167" font-size="10.5" fill="#c4d3e0">detail/ · history/</text>
+
+  <!-- box 4: Web (ours) -->
+  <rect x="640" y="104" width="176" height="84" rx="9" fill="#0f2233" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="654" y="128" class="t" font-size="13" fill="#58a6ff">Web · Astro 靜態站</text>
+  <text x="654" y="149" font-size="10.5" fill="#c4d3e0">Caddy / nginx · PWA</text>
+  <text x="654" y="167" font-size="10.5" fill="#c4d3e0">fetch /data/*.json</text>
+
+  <!-- box 5: SQLite (ours) -->
+  <rect x="444" y="232" width="150" height="74" rx="9" fill="#0f2233" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="458" y="256" class="t" font-size="13" fill="#58a6ff">SQLite</text>
+  <text x="458" y="277" font-size="10.5" fill="#c4d3e0">better-sqlite3 · WAL</text>
+  <text x="458" y="295" font-size="10.5" fill="#c4d3e0">價格歷史 + 史低</text>
+
+  <!-- box 6: Discord (external) -->
+  <rect x="250" y="356" width="150" height="74" rx="9" fill="#161b22" stroke="#30363d" stroke-width="1.3"/>
+  <text x="264" y="380" class="t" font-size="13" fill="#e6edf3">Discord 通知</text>
+  <text x="264" y="401" font-size="10.5" fill="#8b949e">降價 / 免費 / 摘要</text>
+  <text x="264" y="419" font-size="10.5" fill="#8b949e">頻道 @ 或 DM</text>
+
+  <!-- box 7: API (ours) -->
+  <rect x="444" y="356" width="150" height="74" rx="9" fill="#0f2233" stroke="#1f6feb" stroke-width="1.3"/>
+  <text x="458" y="380" class="t" font-size="13" fill="#58a6ff">API · Fastify</text>
+  <text x="458" y="401" font-size="10.5" fill="#c4d3e0">OAuth · 願望單</text>
+  <text x="458" y="419" font-size="10.5" fill="#c4d3e0">通知偏好</text>
+
+  <!-- box 8: 瀏覽器 (external) -->
+  <rect x="640" y="356" width="176" height="74" rx="9" fill="#161b22" stroke="#30363d" stroke-width="1.3"/>
+  <text x="654" y="380" class="t" font-size="13" fill="#e6edf3">使用者瀏覽器</text>
+  <text x="654" y="401" font-size="10.5" fill="#8b949e">離線優先</text>
+  <text x="654" y="419" font-size="10.5" fill="#8b949e">未登入也能瀏覽</text>
+
+  <!-- footer: deploy band -->
+  <rect x="28" y="450" width="788" height="32" rx="8" fill="#10171f" stroke="#21262d"/>
+  <text x="422" y="470" text-anchor="middle" font-size="11.5" fill="#adbac7">部署:Docker · Oracle Cloud · Caddy · Cloudflare Tunnel　|　<tspan fill="#58a6ff" font-weight="700">GitHub Actions CD</tspan>(push main 自動部署)</text>
+</svg>
