@@ -1,9 +1,10 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-**已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。**R5 批次已合併 main 並自動部署 live**(GitHub Actions「Deploy to Oracle」綠;PR #14 merged、#15–#18 內容已隨整鏈快進進 main 故關閉)。R5 含:列內走勢圖+類型篩選、收藏目標價、通知偏好子系統(降價/免費/摘要/類型/頻道·DM)、Steam 願望單匯入,及小尾巴+2 bug;末端含對抗式 review 修正(目標價只在創新低觸發、個人免費永久遺失 2 bug)。**164 測試綠**。**登入後通知偏好/目標價/願望單匯入 + 真實 Discord 頻道/DM 待使用者用自己帳號/bot 親驗。**
+**已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。R6 Discord rich embed 已合併 main(PR #20)。**R7 進行中(`feat/discord-bot-server-routing`,待 PR):per-user 邀請機器人到自己伺服器 + 頻道路由**。**253 測試綠**、四個 workspace tsc 乾淨、web build 通過。**真實 bot 邀請/頻道路由待使用者完成 Ops 前置(Bot 設 Public、Discord 後台註冊新 redirect URI、主機 `.env` 加 `DISCORD_BOT_INVITE_REDIRECT_URI`)後親驗。**
 
 ## 已完成
+- [2026-06-26] 🤖 R7 per-user 邀請機器人 + 伺服器/頻道路由(`feat/discord-bot-server-routing`,待 PR):設定頁新增「Discord 伺服器通知」區——使用者可把官方機器人邀請進**自己的伺服器**、選伺服器與頻道(預設統一、可切「分流」讓降價/免費/摘要各送不同頻道)、設提及方式(不提及 / @我 / @身分組)、看連線狀態、發測試通知、移除連線。後端新增 `delivery='guild'` 與 `notif_prefs` 路由欄 + `user_bot_guilds` 表;`/api/bot/*` 路由(invite/callback/guilds/channels/roles/test/disconnect)。**安全要點(對抗式 review 抓到並修)**:邀請 callback 的 `guild_id` 可偽造,故用 `scope=bot guilds`+換 code+`/users/@me/guilds` 驗使用者真有該 guild 管理權才登記;寫入路由前用 bot token 即時驗證頻道/身分組歸屬;allowed_mentions 最小白名單。worker 路由解析抽成純函式 `worker/src/route.ts`;`postChannelMessage` 支援精準 mention 白名單;embeds 加 `mentionText`;順手修 `getNotifPrefs(ForUser)` 把 `'guild'` 直通(原 ternary 會吃成 channel)。**+43 測試(253 綠)**;Preview 實測設定頁(深/淺、統一/分流、@身分組)版面正確並修一個 `.set-row[hidden]` CSS bug。
 - [2026-06-26] 🎨 R6 Discord 通知改 Steam 商店風 rich embed(`feat/discord-embeds`,待 PR):4 型通知(免費公告/個人免費/降價·目標價/特價 digest)純文字→embed(`inline-code` chip/Discord `<t:>` 領取倒數/封面圖/link button/footer);傳輸層 `postChannelMessage`·`sendDm` 改吃 `string|MessagePayload`,排版抽到純函式 `worker/src/embeds.ts`(TDD)。免費完整版用 `searchSteamAppid`(storesearch 以標題解析、正規化相等才套用、快取 `free_giveaways.appid`)補評價·原價封面,贈送一律框「免費領取」(不沿用 Steam 現價),對不到/非 Steam 退精簡版;降價·digest 重用既有 `games`/`game_reviews`/`Deal` 補強不增 Steam 請求。**對抗式多代理 review 修 8 項**(appid 查詢失敗不毒化快取、embed 256/4096 截斷、chip 反引號淨化、parseEndDate 範圍驗證、enrich 封面 isHttp 守、本輪 appdetails 共用快取、平台解析改用 `parsePlatforms`)。**210 測試綠**、worker tsc 乾淨;新 `scripts/preview-embeds.ts` 以真實 Steam 資料肉眼比對。
 - [2026-06-26] 📄 文件:README 改寫為作品集風格(對齊 Soulshard 風,加徽章/TOC/Mermaid/技術亮點/已知限制/文件索引)+ 新增 `docs/architecture.svg` 架構圖 + MIT `LICENSE`
 - [2026-06-26] 🧪 R5.7 對抗式review修2bug+5小修
@@ -119,3 +120,4 @@
 - **架構**:公開瀏覽=靜態 JSON(快、穩);帳號/通知另起 API 服務 + bot(後續子系統)。
 - **資料與前端解耦**:worker 烤 JSON,前端 client 端 fetch,資料更新免重 build。
 - **技術選型**:後端 Node + TS + better-sqlite3(WAL);前端 Astro;由助理選定。
+- **per-user 邀請機器人走「bot 邀請」而非 webhook**(2026-06-26):使用者要的是把官方機器人邀進自己伺服器、選頻道,故沿用既有 bot(非 webhook)。**關鍵安全決策**:Discord 邀請 callback 帶回的 `guild_id` 官方明載「可被偽造,只能當 hint」,絕不可直接當擁有權白名單;改用 `scope=bot guilds`(純 `scope=bot` 是 callback-less 不會回跳)+ 換 code + 以使用者 token 打 `/users/@me/guilds` 確認其 owner 或具 `MANAGE_GUILD` 才登記到 `user_bot_guilds`。之後所有 guild-scoped 動作與寫入皆以該表 + bot token 即時驗證頻道/身分組歸屬,allowed_mentions 用最小白名單。Ops:Bot 須設 Public、後台註冊新 redirect URI(`DISCORD_BOT_INVITE_REDIRECT_URI`)。
