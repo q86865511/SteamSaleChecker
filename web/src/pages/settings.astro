@@ -62,6 +62,7 @@ import Base from '../layouts/Base.astro';
         <div class="seg" id="notif-delivery-seg" role="radiogroup" aria-labelledby="ndeliv-lbl">
           <button class="seg-btn" type="button" role="radio" aria-checked="false" data-delivery-choice="channel" data-i18n="deliveryChannel">頻道 @我</button>
           <button class="seg-btn" type="button" role="radio" aria-checked="false" data-delivery-choice="dm" data-i18n="deliveryDm">私訊</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-delivery-choice="guild" id="delivery-guild-btn" data-i18n="deliveryGuild" disabled>我的伺服器</button>
         </div>
       </div>
       <div class="set-row set-row-genres">
@@ -70,6 +71,73 @@ import Base from '../layouts/Base.astro';
           <span class="muted small" data-i18n="notifGenresHint" style="display:block;font-weight:400">不選=全部類型</span>
         </span>
         <div class="genre-multi" id="notif-genres" role="group" aria-labelledby="ngenre-lbl"></div>
+      </div>
+    </div>
+
+    <div id="discord-server-section" hidden>
+      <h2 class="set-subhead" data-i18n="srvNotifTitle">Discord 伺服器通知</h2>
+      <p class="muted small srv-status" id="srv-status" role="status" data-srv-state="none"></p>
+
+      <div class="set-row" id="srv-invite-row">
+        <span class="set-label" data-i18n="srvInviteLabel">把機器人加入你的伺服器</span>
+        <a class="ctl-btn srv-invite-btn" id="srv-invite-btn" href="#" rel="noopener" data-i18n="srvInviteBtn">邀請機器人到我的伺服器</a>
+      </div>
+
+      <div class="set-row" id="srv-guild-row" hidden>
+        <span class="set-label" id="srv-guild-lbl" data-i18n="srvGuildLabel">已連線的伺服器</span>
+        <div class="srv-guild-pick">
+          <select class="set-select" id="srv-guild-select" aria-labelledby="srv-guild-lbl"></select>
+          <a class="ctl-btn srv-add-another" id="srv-add-another" href="#" rel="noopener" data-i18n="srvAddAnother">加入其他伺服器</a>
+        </div>
+      </div>
+
+      <div class="set-row" id="srv-channel-row" hidden>
+        <span class="set-label" id="srv-channel-lbl" data-i18n="srvChannelLabel">通知頻道</span>
+        <select class="set-select" id="srv-channel-select" aria-labelledby="srv-channel-lbl"></select>
+      </div>
+
+      <div class="set-row" id="srv-split-row" hidden>
+        <span class="set-label" id="srv-split-lbl" data-i18n="srvSplitLabel">各類型分流到不同頻道</span>
+        <div class="seg" id="srv-split-seg" role="radiogroup" aria-labelledby="srv-split-lbl">
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-split-choice="unified" data-i18n="srvSplitUnified">統一</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-split-choice="split" data-i18n="srvSplitPerType">分流</button>
+        </div>
+      </div>
+      <div id="srv-split-body" hidden>
+        <div class="set-row">
+          <span class="set-label" id="srv-cdrop-lbl" data-i18n="srvChDropLabel">降價頻道</span>
+          <select class="set-select" id="srv-channel-drop" aria-labelledby="srv-cdrop-lbl"></select>
+        </div>
+        <div class="set-row">
+          <span class="set-label" id="srv-cfree-lbl" data-i18n="srvChFreeLabel">免費遊戲頻道</span>
+          <select class="set-select" id="srv-channel-free" aria-labelledby="srv-cfree-lbl"></select>
+        </div>
+        <div class="set-row">
+          <span class="set-label" id="srv-cdigest-lbl" data-i18n="srvChDigestLabel">摘要頻道</span>
+          <select class="set-select" id="srv-channel-digest" aria-labelledby="srv-cdigest-lbl"></select>
+        </div>
+      </div>
+
+      <div class="set-row" id="srv-mention-row" hidden>
+        <span class="set-label" id="srv-mention-lbl" data-i18n="srvMentionLabel">提及方式</span>
+        <div class="seg" id="srv-mention-seg" role="radiogroup" aria-labelledby="srv-mention-lbl">
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-mention-choice="none" data-i18n="srvMentionNone">不提及</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-mention-choice="self" data-i18n="srvMentionMe">@我</button>
+          <button class="seg-btn" type="button" role="radio" aria-checked="false" data-mention-choice="role" data-i18n="srvMentionRole">@身分組</button>
+        </div>
+      </div>
+      <div class="set-row" id="srv-role-row" hidden>
+        <span class="set-label" id="srv-role-lbl" data-i18n="srvRoleLabel">選擇身分組</span>
+        <select class="set-select" id="srv-role-select" aria-labelledby="srv-role-lbl"></select>
+      </div>
+
+      <div class="set-row srv-actions-row" id="srv-actions-row" hidden>
+        <span class="set-label" data-i18n="srvActionsLabel">連線管理</span>
+        <div class="srv-actions">
+          <button class="ctl-btn" type="button" id="srv-test-btn" data-i18n="srvTestBtn">發送測試通知</button>
+          <button class="ctl-btn ctl-btn-danger" type="button" id="srv-remove-btn" data-i18n="srvRemoveBtn">移除連線</button>
+          <span class="muted small srv-action-msg" id="srv-action-msg" role="status" aria-live="polite"></span>
+        </div>
       </div>
     </div>
   </section>

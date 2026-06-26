@@ -5,6 +5,7 @@ import type { DB } from './db';
 import { registerAuth } from './auth';
 import { registerWishlist } from './wishlist';
 import { registerNotif } from './notif';
+import { registerBotConnect } from './bot-connect';
 
 const SESSION_SECRET = process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 32
   ? process.env.SESSION_SECRET
@@ -26,5 +27,6 @@ export async function buildApp(db: DB): Promise<FastifyInstance> {
   registerAuth(app, db);
   registerWishlist(app, db);
   registerNotif(app, db);
+  registerBotConnect(app, db);
   return app;
 }

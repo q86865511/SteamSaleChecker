@@ -1,8 +1,9 @@
 import type { DB } from './db';
-import { usersWantingFree, freeAlreadySent, markFreeSent, freeSentCount } from './db';
+import { usersWantingFree, freeAlreadySent, markFreeSent, freeSentCount, getNotifPrefsForUser } from './db';
 import { postChannelMessage, sendDm } from './discord-bot';
 import { buildGiveawayEmbed, type GiveawayEnrich } from './embeds';
 import { enrichGiveaway, type AppCache } from './giveaways';
+import { resolveTarget, mentionPrefix, allowedMentionsFor } from './route';
 import { isSteamGiveaway, type FreeGiveaway } from '@ssc/shared';
 
 const STEAM_ICON = process.env.SSC_STEAM_ICON_URL || undefined;
@@ -31,17 +32,20 @@ export async function collectAndSendPersonalFree(
       for (const g of steam) markFreeSent(db, r.userId, g.id, now);
       continue;
     }
+    // 取完整偏好(含 guild 路由;usersWantingFree 只帶 delivery)。免費類型路由到 'free' 頻道。
+    const prefs = getNotifPrefsForUser(db, r.userId);
+    const tgt = resolveTarget(prefs.delivery, prefs.guild, 'free', channelId);
     for (const g of steam) {
       if (sent >= MAX_PER_RUN) return sent; // 達上限:未送者不標記 → 下輪續發
       if (freeAlreadySent(db, r.userId, g.id)) continue;
       const enrich = await getEnrich(g);
       const payload = buildGiveawayEmbed(
         { title: g.title, url: g.url, type: g.type, platforms: g.platforms.join(','), end_date: g.endDate, worth_usd: g.worthUsd ?? null, image: g.image },
-        enrich, { mention: r.discordId, steamIcon: STEAM_ICON },
+        enrich, { mention: r.discordId, mentionText: tgt.useGuildMention ? mentionPrefix(prefs.guild.mention, r.discordId) : undefined, steamIcon: STEAM_ICON },
       );
       try {
-        if (r.delivery === 'dm') await sendDm(botToken, r.discordId, payload);
-        else await postChannelMessage(botToken, channelId, payload, true);
+        if (tgt.kind === 'dm') await sendDm(botToken, r.discordId, payload);
+        else await postChannelMessage(botToken, tgt.channelId!, payload, tgt.useGuildMention ? allowedMentionsFor(prefs.guild.mention, r.discordId) : true);
         markFreeSent(db, r.userId, g.id, now);
         sent++;
         await new Promise(res => setTimeout(res, 1200));

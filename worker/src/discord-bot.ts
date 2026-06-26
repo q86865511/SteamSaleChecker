@@ -22,18 +22,23 @@ export async function sendDm(botToken: string, recipientId: string, payload: str
   if (!res.ok) throw new Error(`dm post ${res.status}`);
 }
 
-// allowMentions 預設 false:頻道公告(免費/摘要)不解析任何 mention,避免被外部標題注入 <@id> 觸發 ping。
-// 個人通知(content 含 <@discordId>)需傳 true 才會 ping。
+// allow 第 4 參數(預設 false):
+//   false → { parse: [] }(頻道公告不解析任何 mention,避免外部標題注入 <@id> 觸發 ping)
+//   true  → { parse: ['users'] }(全域頻道個人通知 ping,維持舊行為)
+//   物件  → 精準白名單 { users:[...] } 或 { roles:[...] }(guild 路由:@我 / @身分組,最小化權限)
+export type MentionPolicy = boolean | { parse?: string[]; users?: string[]; roles?: string[] };
+function allowedMentions(allow: MentionPolicy): object {
+  if (allow === false) return { parse: [] };
+  if (allow === true) return { parse: ['users'] };
+  return allow; // 物件:直接當 allowed_mentions(由 allowedMentionsFor 產生 {parse:[]}/{users}/{roles},已是最小白名單)
+}
 export async function postChannelMessage(
-  botToken: string, channelId: string, payload: string | MessagePayload, allowMentions = false,
+  botToken: string, channelId: string, payload: string | MessagePayload, allow: MentionPolicy = false,
 ): Promise<void> {
   const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...normalize(payload),
-      allowed_mentions: allowMentions ? { parse: ['users'] } : { parse: [] },
-    }),
+    body: JSON.stringify({ ...normalize(payload), allowed_mentions: allowedMentions(allow) }),
   });
   if (!res.ok) throw new Error(`discord post ${res.status}`);
 }

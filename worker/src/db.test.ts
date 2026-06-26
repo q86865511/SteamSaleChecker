@@ -6,7 +6,7 @@ import { openDb, recordPriceAndLow, getStats, getPriceHistory, getWishersForApp,
   replaceGameGenres, getGenresForApp, allGenres, prunePriceHistory,
   getNotifPrefsForUser, usersWantingFree, freeAlreadySent, markFreeSent,
   usersWantingDigest, lastPersonalDigest, recordPersonalDigest } from './db';
-import type { FreeGiveaway } from '@ssc/shared';
+import { DEFAULT_GUILD_ROUTING, type FreeGiveaway } from '@ssc/shared';
 
 const gw = (id: string, over: Partial<FreeGiveaway> = {}): FreeGiveaway =>
   ({ id, source: 'gamerpower', title: 'G' + id, image: '', platforms: ['Steam'], endDate: null, url: 'u' + id, type: 'game', ...over });
@@ -138,10 +138,21 @@ describe('game_reviews', () => {
 describe('通知偏好 + 個人通知狀態', () => {
   it('getNotifPrefsForUser 無列回預設;設定後讀回', () => {
     const db = openDb(':memory:');
-    expect(getNotifPrefsForUser(db, 1)).toEqual({ dropEnabled: true, freeEnabled: false, digestHours: 0, delivery: 'channel', genres: [] });
+    expect(getNotifPrefsForUser(db, 1)).toEqual({ dropEnabled: true, freeEnabled: false, digestHours: 0, delivery: 'channel', genres: [], guild: DEFAULT_GUILD_ROUTING });
     db.prepare("INSERT INTO notif_prefs(user_id,drop_enabled,free_enabled,digest_hours,delivery) VALUES(1,0,1,24,'dm')").run();
     db.prepare("INSERT INTO notif_genres(user_id,genre) VALUES(1,'動作')").run();
-    expect(getNotifPrefsForUser(db, 1)).toEqual({ dropEnabled: false, freeEnabled: true, digestHours: 24, delivery: 'dm', genres: ['動作'] });
+    expect(getNotifPrefsForUser(db, 1)).toEqual({ dropEnabled: false, freeEnabled: true, digestHours: 24, delivery: 'dm', genres: ['動作'], guild: DEFAULT_GUILD_ROUTING });
+  });
+  it('delivery=guild 不被吃成 channel,且組出 guild 路由(C5)', () => {
+    const db = openDb(':memory:');
+    db.prepare("INSERT INTO user_bot_guilds(user_id,guild_id,guild_name,joined_at) VALUES(1,'g1','S',100)").run();
+    db.prepare("INSERT INTO notif_prefs(user_id,delivery,guild_id,guild_channel_id,ch_free,mention_mode,mention_role_id) VALUES(1,'guild','g1','uni','cf','role','r9')").run();
+    const p = getNotifPrefsForUser(db, 1);
+    expect(p.delivery).toBe('guild');
+    expect(p.guild.guildId).toBe('g1');
+    expect(p.guild.channelId).toBe('uni');
+    expect(p.guild.channels.free).toBe('cf');
+    expect(p.guild.mention).toEqual({ mode: 'role', roleId: 'r9' });
   });
   it('usersWantingFree 只回 free_enabled=1 且有 discord_id', () => {
     const db = openDb(':memory:');

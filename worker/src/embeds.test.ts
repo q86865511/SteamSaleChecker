@@ -109,6 +109,10 @@ describe('buildGiveawayEmbed(精簡版)', () => {
   const p = buildGiveawayEmbed(g, null, {});
 
   it('非個人版時 content 無提及', () => expect(p.content).toBeUndefined());
+  it('mentionText 覆蓋(身分組/不提及)', () => {
+    expect(buildGiveawayEmbed(g, null, { mentionText: '<@&r1>' }).content).toBe('<@&r1>');
+    expect(buildGiveawayEmbed(g, null, { mention: '42', mentionText: '' }).content).toBeUndefined();
+  });
   it('footer 標 GamerPower 而非 Steam', () => expect(p.embeds![0].footer!.text).toContain('GamerPower'));
   it('image 用 GamerPower 圖', () => expect(p.embeds![0].image!.url).toBe('https://gp/img.jpg'));
   it('description 含平台與價值', () => {
@@ -153,6 +157,15 @@ describe('buildDropEmbed', () => {
     expect(p.embeds![0].description).toContain('NT$ 1');
     expect(p.embeds![0].thumbnail).toBeUndefined();
   });
+  it('mentionText 有給時覆蓋預設 @我:身分組', () => {
+    expect(buildDropEmbed({ ...base, reason: 'drop', mentionText: '<@&r9>' }).content).toBe('<@&r9>');
+  });
+  it('mentionText 為空字串 → 不提及(content undefined)', () => {
+    expect(buildDropEmbed({ ...base, reason: 'drop', mentionText: '' }).content).toBeUndefined();
+  });
+  it('未給 mentionText 時維持舊行為 @discordId', () => {
+    expect(buildDropEmbed({ ...base, reason: 'drop' }).content).toBe('<@7>');
+  });
 });
 
 describe('buildDigestEmbed', () => {
@@ -180,5 +193,9 @@ describe('buildDigestEmbed', () => {
   });
   it('個人版可帶 @ 提及', () => {
     expect(buildDigestEmbed(deals, 5, { mention: '9' })!.content).toBe('<@9>');
+  });
+  it('mentionText 覆蓋(身分組/不提及)', () => {
+    expect(buildDigestEmbed(deals, 5, { mentionText: '<@&r1>' })!.content).toBe('<@&r1>');
+    expect(buildDigestEmbed(deals, 5, { mentionText: '' })!.content).toBeUndefined();
   });
 });

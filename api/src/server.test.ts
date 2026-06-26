@@ -28,6 +28,13 @@ describe('api smoke', () => {
     expect((await app.inject({ method:'GET', url:'/api/notif/prefs' })).statusCode).toBe(401);
     expect((await app.inject({ method:'PUT', url:'/api/notif/prefs', payload:{ dropEnabled:false } })).statusCode).toBe(401);
     expect((await app.inject({ method:'POST', url:'/api/wishlist/import', payload:{ steamId:'76561197960434622' } })).statusCode).toBe(401);
+    // 伺服器連線(bot)路由一律需登入
+    expect((await app.inject({ method:'GET', url:'/api/bot/invite' })).statusCode).toBe(401);
+    expect((await app.inject({ method:'GET', url:'/api/bot/guilds' })).statusCode).toBe(401);
+    expect((await app.inject({ method:'GET', url:'/api/bot/guilds/g1/channels' })).statusCode).toBe(401);
+    expect((await app.inject({ method:'GET', url:'/api/bot/guilds/g1/roles' })).statusCode).toBe(401);
+    expect((await app.inject({ method:'POST', url:'/api/bot/test', payload:{} })).statusCode).toBe(401);
+    expect((await app.inject({ method:'POST', url:'/api/bot/disconnect', payload:{} })).statusCode).toBe(401);
     await app.close();
   });
 

@@ -42,6 +42,8 @@ export async function mergeLocalOnLogin(): Promise<void> {
   localStorage.removeItem(LS_KEY);
 }
 export function discordLoginUrl(): string { return apiBase() + '/auth/discord'; }
+// 邀請機器人到使用者自己的伺服器(後端產 state 後導去 Discord bot 授權頁)。
+export function discordBotInviteUrl(): string { return apiBase() + '/api/bot/invite'; }
 export async function logout(): Promise<void> { await api('/auth/logout', { method: 'POST' }); }
 // Phase D:從公開 Steam 願望單匯入(後端抓取);回傳匯入數與最新收藏,失敗回 null。
 export async function importSteamWishlist(steamId: string): Promise<{ imported: number; wishlist: number[] } | null> {

@@ -3,6 +3,7 @@ import { lastReportSent, recordReportSent, usersWantingDigest, lastPersonalDiges
 import { shouldRefresh } from './seed/itad';
 import { postChannelMessage, sendDm } from './discord-bot';
 import { buildDigestEmbed } from './embeds';
+import { resolveTarget, mentionPrefix, allowedMentionsFor } from './route';
 import type { Deal } from '@ssc/shared';
 
 // 依使用者類型白名單過濾 deals(空白名單=不限)。純函式。
@@ -40,11 +41,14 @@ export async function maybeSendPersonalDigests(
   for (const r of recipients) {
     if (!shouldRefresh(lastPersonalDigest(db, r.userId), now, r.digestHours * 3600)) continue;
     const prefs = getNotifPrefsForUser(db, r.userId);
-    const payload = buildDigestEmbed(filterDealsByGenres(deals, prefs.genres, genresByApp), topN, { mention: r.discordId });
+    const tgt = resolveTarget(prefs.delivery, prefs.guild, 'digest', channelId);
+    const payload = buildDigestEmbed(filterDealsByGenres(deals, prefs.genres, genresByApp), topN, {
+      mention: r.discordId, mentionText: tgt.useGuildMention ? mentionPrefix(prefs.guild.mention, r.discordId) : undefined,
+    });
     if (!payload) { recordPersonalDigest(db, r.userId, now); continue; }
     try {
-      if (r.delivery === 'dm') await sendDm(botToken, r.discordId, payload);
-      else await postChannelMessage(botToken, channelId, payload, true);
+      if (tgt.kind === 'dm') await sendDm(botToken, r.discordId, payload);
+      else await postChannelMessage(botToken, tgt.channelId!, payload, tgt.useGuildMention ? allowedMentionsFor(prefs.guild.mention, r.discordId) : true);
       recordPersonalDigest(db, r.userId, now);
       sent++;
       await new Promise(res => setTimeout(res, 1200));

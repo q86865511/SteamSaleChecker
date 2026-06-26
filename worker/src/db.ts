@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { evaluateLow, type FreeGiveaway, type ReviewSummary, type NotifPrefs, type NotifDelivery } from '@ssc/shared';
+import { evaluateLow, type FreeGiveaway, type ReviewSummary, type NotifPrefs, type NotifDelivery, type GuildRouting, type MentionMode } from '@ssc/shared';
 export type DB = Database.Database;
 export function openDb(path: string): DB {
   const db = new Database(path);
@@ -42,6 +42,9 @@ export function openDb(path: string): DB {
       user_id INTEGER, giveaway_id TEXT, notified_at INTEGER, PRIMARY KEY(user_id, giveaway_id));
     CREATE TABLE IF NOT EXISTS notif_digest_gates(
       user_id INTEGER PRIMARY KEY, last_sent_at INTEGER);
+    CREATE TABLE IF NOT EXISTS user_bot_guilds(
+      user_id INTEGER NOT NULL, guild_id TEXT NOT NULL, guild_name TEXT, joined_at INTEGER,
+      PRIMARY KEY(user_id, guild_id));
   `);
   // 遷移:早期 free_giveaways 無 first_seen/notified/notified_at(SQLite 無 ADD COLUMN IF NOT EXISTS)
   addColumnIfMissing(db, 'free_giveaways', 'first_seen', 'INTEGER');
@@ -51,6 +54,14 @@ export function openDb(path: string): DB {
   addColumnIfMissing(db, 'free_giveaways', 'appid', 'INTEGER');
   // 遷移:wishlist 加每款目標價(NULL=未設);worker 通知時讀取
   addColumnIfMissing(db, 'wishlist', 'target_low_cents', 'INTEGER');
+  // 遷移:notif_prefs 加 per-user 伺服器路由欄(須與 api/src/db.ts 鏡像一致,否則 SELECT 會炸)
+  addColumnIfMissing(db, 'notif_prefs', 'guild_id', 'TEXT');
+  addColumnIfMissing(db, 'notif_prefs', 'guild_channel_id', 'TEXT');
+  addColumnIfMissing(db, 'notif_prefs', 'ch_drop', 'TEXT');
+  addColumnIfMissing(db, 'notif_prefs', 'ch_free', 'TEXT');
+  addColumnIfMissing(db, 'notif_prefs', 'ch_digest', 'TEXT');
+  addColumnIfMissing(db, 'notif_prefs', 'mention_mode', "TEXT NOT NULL DEFAULT 'none'");
+  addColumnIfMissing(db, 'notif_prefs', 'mention_role_id', 'TEXT');
   return db;
 }
 
@@ -150,14 +161,37 @@ export function setGiveawayAppid(db: DB, id: string, appid: number): void {
 
 // --- 通知偏好(per-user;worker 端讀取以決定對誰、用什麼方式發)---
 const NOTIF_DEFAULTS = { dropEnabled: true, freeEnabled: false, digestHours: 0, delivery: 'channel' as NotifDelivery };
-export function getNotifPrefsForUser(db: DB, userId: number): NotifPrefs {
-  const row = db.prepare('SELECT drop_enabled, free_enabled, digest_hours, delivery FROM notif_prefs WHERE user_id = ?')
-    .get(userId) as { drop_enabled: number; free_enabled: number; digest_hours: number; delivery: string } | undefined;
-  const genres = (db.prepare('SELECT genre FROM notif_genres WHERE user_id = ? ORDER BY genre').all(userId) as { genre: string }[]).map(r => r.genre);
-  if (!row) return { ...NOTIF_DEFAULTS, genres };
+const defaultGuildRouting = (): GuildRouting => ({
+  guildId: null, guildName: null, channelId: null,
+  channels: { drop: null, free: null, digest: null }, mention: { mode: 'none', roleId: null },
+});
+interface PrefsRow {
+  drop_enabled: number; free_enabled: number; digest_hours: number; delivery: string;
+  guild_id: string | null; guild_channel_id: string | null;
+  ch_drop: string | null; ch_free: string | null; ch_digest: string | null;
+  mention_mode: string | null; mention_role_id: string | null;
+}
+function guildRoutingFromRow(db: DB, userId: number, row: PrefsRow): GuildRouting {
+  if (!row.guild_id) return defaultGuildRouting();
+  const gn = db.prepare('SELECT guild_name FROM user_bot_guilds WHERE user_id=? AND guild_id=?')
+    .get(userId, row.guild_id) as { guild_name: string | null } | undefined;
   return {
-    dropEnabled: !!row.drop_enabled, freeEnabled: !!row.free_enabled,
-    digestHours: row.digest_hours, delivery: row.delivery === 'dm' ? 'dm' : 'channel', genres,
+    guildId: row.guild_id, guildName: gn?.guild_name ?? null, channelId: row.guild_channel_id ?? null,
+    channels: { drop: row.ch_drop ?? null, free: row.ch_free ?? null, digest: row.ch_digest ?? null },
+    mention: { mode: (row.mention_mode as MentionMode) ?? 'none', roleId: row.mention_role_id ?? null },
+  };
+}
+export function getNotifPrefsForUser(db: DB, userId: number): NotifPrefs {
+  const row = db.prepare(`SELECT drop_enabled, free_enabled, digest_hours, delivery,
+      guild_id, guild_channel_id, ch_drop, ch_free, ch_digest, mention_mode, mention_role_id
+    FROM notif_prefs WHERE user_id = ?`).get(userId) as PrefsRow | undefined;
+  const genres = (db.prepare('SELECT genre FROM notif_genres WHERE user_id = ? ORDER BY genre').all(userId) as { genre: string }[]).map(r => r.genre);
+  if (!row) return { ...NOTIF_DEFAULTS, genres, guild: defaultGuildRouting() };
+  return {
+    dropEnabled: !!row.drop_enabled, freeEnabled: !!row.free_enabled, digestHours: row.digest_hours,
+    // C5 修正:'guild' 與 'dm' 都原樣帶出,否則 guild 路由會被吃成 channel 而誤送全域
+    delivery: (row.delivery === 'dm' || row.delivery === 'guild') ? row.delivery : 'channel',
+    genres, guild: guildRoutingFromRow(db, userId, row),
   };
 }
 export interface FreeRecipient { userId: number; discordId: string; delivery: NotifDelivery; }
