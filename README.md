@@ -2,6 +2,8 @@
 
 > 自架的 Steam 特價追蹤站 —— 後端每 ~30 分鐘抓 Steam 官方端點與 GamerPower、**自建價格歷史**(追蹤「開始監測以來的最低價」),烤成靜態 JSON;前端 Astro 暗色電競風,可選配 Discord 帳號、願望單與降價/免費/摘要通知。
 
+<p align="center"><img src="docs/cover.png" alt="Steam 特價追蹤站 — 封面" width="100%"></p>
+
 [![Deploy](https://github.com/q86865511/SteamSaleChecker/actions/workflows/deploy.yml/badge.svg)](https://github.com/q86865511/SteamSaleChecker/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live-steam.terrychou.com-1f6feb?logo=steam&logoColor=white)](https://steam.terrychou.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178c6?logo=typescript&logoColor=white)](tsconfig.base.json)
