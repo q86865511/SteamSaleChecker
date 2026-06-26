@@ -4,6 +4,7 @@
 **已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。**R5 批次已合併 main 並自動部署 live**(GitHub Actions「Deploy to Oracle」綠;PR #14 merged、#15–#18 內容已隨整鏈快進進 main 故關閉)。R5 含:列內走勢圖+類型篩選、收藏目標價、通知偏好子系統(降價/免費/摘要/類型/頻道·DM)、Steam 願望單匯入,及小尾巴+2 bug;末端含對抗式 review 修正(目標價只在創新低觸發、個人免費永久遺失 2 bug)。**164 測試綠**。**登入後通知偏好/目標價/願望單匯入 + 真實 Discord 頻道/DM 待使用者用自己帳號/bot 親驗。**
 
 ## 已完成
+- [2026-06-26] 🎨 R6 Discord 通知改 Steam 商店風 rich embed(`feat/discord-embeds`,待 PR):4 型通知(免費公告/個人免費/降價·目標價/特價 digest)純文字→embed(`inline-code` chip/Discord `<t:>` 領取倒數/封面圖/link button/footer);傳輸層 `postChannelMessage`·`sendDm` 改吃 `string|MessagePayload`,排版抽到純函式 `worker/src/embeds.ts`(TDD)。免費完整版用 `searchSteamAppid`(storesearch 以標題解析、正規化相等才套用、快取 `free_giveaways.appid`)補評價·原價封面,贈送一律框「免費領取」(不沿用 Steam 現價),對不到/非 Steam 退精簡版;降價·digest 重用既有 `games`/`game_reviews`/`Deal` 補強不增 Steam 請求。**對抗式多代理 review 修 8 項**(appid 查詢失敗不毒化快取、embed 256/4096 截斷、chip 反引號淨化、parseEndDate 範圍驗證、enrich 封面 isHttp 守、本輪 appdetails 共用快取、平台解析改用 `parsePlatforms`)。**210 測試綠**、worker tsc 乾淨;新 `scripts/preview-embeds.ts` 以真實 Steam 資料肉眼比對。
 - [2026-06-26] 📄 文件:README 改寫為作品集風格(對齊 Soulshard 風,加徽章/TOC/Mermaid/技術亮點/已知限制/文件索引)+ 新增 `docs/architecture.svg` 架構圖 + MIT `LICENSE`
 - [2026-06-26] 🧪 R5.7 對抗式review修2bug+5小修
 - [2026-06-26] 🌐 R5.6 Steam願望單匯入
