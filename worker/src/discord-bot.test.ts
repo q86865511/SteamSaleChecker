@@ -37,6 +37,18 @@ describe('postChannelMessage', () => {
     try { await postChannelMessage('tok', 'c1', { content: '<@9>' }, true); } finally { globalThis.fetch = orig; }
     expect(JSON.parse(calls[0].opts.body).allowed_mentions).toEqual({ parse: ['users'] });
   });
+  it('物件白名單 {users} → 只允許該使用者(guild 路由 @我)', async () => {
+    const { calls, fn } = mockFetch();
+    const orig = globalThis.fetch; (globalThis as any).fetch = fn;
+    try { await postChannelMessage('tok', 'c1', { content: '<@9>' }, { users: ['9'] }); } finally { globalThis.fetch = orig; }
+    expect(JSON.parse(calls[0].opts.body).allowed_mentions).toEqual({ users: ['9'] });
+  });
+  it('物件白名單 {roles} → 只允許該身分組(guild 路由 @身分組)', async () => {
+    const { calls, fn } = mockFetch();
+    const orig = globalThis.fetch; (globalThis as any).fetch = fn;
+    try { await postChannelMessage('tok', 'c1', { content: '<@&r1>' }, { roles: ['r1'] }); } finally { globalThis.fetch = orig; }
+    expect(JSON.parse(calls[0].opts.body).allowed_mentions).toEqual({ roles: ['r1'] });
+  });
   it('非 2xx 時 throw', async () => {
     const orig = globalThis.fetch;
     (globalThis as any).fetch = async () => ({ ok: false, status: 500 });

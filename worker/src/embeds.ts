@@ -70,6 +70,11 @@ const linkButton = (label: string, url: string): DiscordActionRow[] =>
 const mentionContent = (mention?: string): string | undefined =>
   mention ? `<@${mention}>` : undefined;
 
+// 訊息 content 的提及字串:mentionText 有給(含 '')時優先 —— '' 代表不提及(content undefined);
+// 未給時沿用舊行為 <@mention>。讓 guild 路由能用 self/role/none,且不破壞既有呼叫端。
+const resolveContent = (mentionText: string | undefined, mention?: string): string | undefined =>
+  mentionText !== undefined ? (mentionText || undefined) : mentionContent(mention);
+
 export interface GiveawayInput {
   title: string; url: string; type: string; platforms: string;
   end_date?: string | null; worth_usd?: string | null; image?: string | null;
@@ -79,7 +84,7 @@ export interface GiveawayInput {
 export interface GiveawayEnrich {
   appid: number; headerImage: string; regularCents: number; review?: ReviewSummary | null;
 }
-export interface BuildOpts { mention?: string; steamIcon?: string; }
+export interface BuildOpts { mention?: string; mentionText?: string; steamIcon?: string; }
 
 // 免費領取 embed。enrich 有值=Steam 完整版、null=精簡版(GamerPower 資料)。
 export function buildGiveawayEmbed(g: GiveawayInput, enrich: GiveawayEnrich | null, opts: BuildOpts = {}): MessagePayload {
@@ -113,7 +118,7 @@ export function buildGiveawayEmbed(g: GiveawayInput, enrich: GiveawayEnrich | nu
 
   embed.description = clamp(lines.join('\n'), MAX_DESC);
   return {
-    content: mentionContent(opts.mention),
+    content: resolveContent(opts.mentionText, opts.mention),
     embeds: [embed],
     components: isHttp(g.url) ? linkButton('前往領取', g.url) : undefined,
   };
@@ -122,9 +127,10 @@ export function buildGiveawayEmbed(g: GiveawayInput, enrich: GiveawayEnrich | nu
 export interface DropInput {
   discordId: string; name: string; appid: number; lowCents: number; reason: 'drop' | 'target';
   regularCents?: number | null; review?: ReviewSummary | null; headerImage?: string | null;
+  mentionText?: string;  // 有給(含 '')時覆蓋預設 @discordId;''=不提及
 }
 
-// 降價/目標價 embed。會 @ 使用者(content 提及)。
+// 降價/目標價 embed。預設 @ 使用者(content 提及);guild 路由可用 mentionText 改成 @身分組或不提及。
 export function buildDropEmbed(p: DropInput): MessagePayload {
   const storeUrl = `https://store.steampowered.com/app/${p.appid}/`;
   const isTarget = p.reason === 'target';
@@ -148,10 +154,10 @@ export function buildDropEmbed(p: DropInput): MessagePayload {
   };
   if (isHttp(p.headerImage)) embed.thumbnail = { url: p.headerImage };
 
-  return { content: `<@${p.discordId}>`, embeds: [embed], components: linkButton('前往商店', storeUrl) };
+  return { content: resolveContent(p.mentionText, p.discordId), embeds: [embed], components: linkButton('前往商店', storeUrl) };
 }
 
-export interface DigestOpts { mention?: string; siteUrl?: string; steamIcon?: string; }
+export interface DigestOpts { mention?: string; mentionText?: string; siteUrl?: string; steamIcon?: string; }
 
 // 特價精選 digest embed;依折扣高→低取 topN;空回 null。
 export function buildDigestEmbed(deals: Deal[], topN: number, opts: DigestOpts = {}): MessagePayload | null {
@@ -171,5 +177,5 @@ export function buildDigestEmbed(deals: Deal[], topN: number, opts: DigestOpts =
   };
   if (isHttp(top[0].headerImage)) embed.image = { url: top[0].headerImage };
 
-  return { content: mentionContent(opts.mention), embeds: [embed], components: linkButton('看更多特價', site) };
+  return { content: resolveContent(opts.mentionText, opts.mention), embeds: [embed], components: linkButton('看更多特價', site) };
 }

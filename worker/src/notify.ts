@@ -2,7 +2,8 @@ import type { DB } from './db';
 import { getWishersForApp, getGenresForApp, getNotifPrefsForUser, alreadyNotified, markNotified, getGameBasics, getReview } from './db';
 import { postChannelMessage, sendDm } from './discord-bot';
 import { buildDropEmbed } from './embeds';
-import type { NotifDelivery } from '@ssc/shared';
+import { resolveTarget, mentionPrefix, allowedMentionsFor } from './route';
+import type { NotifDelivery, GuildRouting } from '@ssc/shared';
 
 export interface NewLow { appid: number; name: string; lowCents: number; }
 // 通知候選:每款在特價的遊戲(現價 + 是否本輪創新低)。
@@ -10,7 +11,8 @@ export interface NewLow { appid: number; name: string; lowCents: number; }
 export interface NotifyCandidate { appid: number; name: string; lowCents: number; isNewLow: boolean; }
 export type NotifyReason = 'drop' | 'target';
 export interface Pending {
-  userId: number; discordId: string; appid: number; name: string; lowCents: number; reason: NotifyReason; delivery: NotifDelivery;
+  userId: number; discordId: string; appid: number; name: string; lowCents: number; reason: NotifyReason;
+  delivery: NotifDelivery; guild: GuildRouting;
 }
 
 export interface NotifyDecisionInput {
@@ -42,7 +44,7 @@ export function collectPending(db: DB, candidates: NotifyCandidate[]): Pending[]
       });
       if (!reason) continue;
       if (!alreadyNotified(db, w.userId, c.appid, c.lowCents)) {
-        out.push({ userId: w.userId, discordId: w.discordId, appid: c.appid, name: c.name, lowCents: c.lowCents, reason, delivery: prefs.delivery });
+        out.push({ userId: w.userId, discordId: w.discordId, appid: c.appid, name: c.name, lowCents: c.lowCents, reason, delivery: prefs.delivery, guild: prefs.guild });
       }
     }
   }
@@ -57,13 +59,16 @@ export async function dispatchNotifications(
     try {
       // 補強(本輪在特價者必在 games / game_reviews 快取):原價、封面、評價。
       const basics = getGameBasics(db, p.appid);
+      // 解析目標頻道(全域/使用者伺服器/分流)與提及方式。guild 路由才套使用者的 mention 設定。
+      const tgt = resolveTarget(p.delivery, p.guild, 'drop', channelId);
       const payload = buildDropEmbed({
         discordId: p.discordId, name: p.name, appid: p.appid, lowCents: p.lowCents, reason: p.reason,
         regularCents: basics?.regularCents ?? null, headerImage: basics?.headerImage ?? null,
         review: getReview(db, p.appid) ?? null,
+        mentionText: tgt.useGuildMention ? mentionPrefix(p.guild.mention, p.discordId) : undefined,
       });
-      if (p.delivery === 'dm') await sendDm(botToken, p.discordId, payload);
-      else await postChannelMessage(botToken, channelId, payload, true);
+      if (tgt.kind === 'dm') await sendDm(botToken, p.discordId, payload);
+      else await postChannelMessage(botToken, tgt.channelId!, payload, tgt.useGuildMention ? allowedMentionsFor(p.guild.mention, p.discordId) : true);
       markNotified(db, p.userId, p.appid, p.lowCents, nowSec);
       sent++;
     } catch (e) {
