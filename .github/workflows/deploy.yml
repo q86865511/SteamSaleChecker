@@ -3,6 +3,8 @@ name: Deploy to Oracle
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch: {}
 
 concurrency:
@@ -23,6 +25,8 @@ jobs:
 
   deploy:
     needs: test
+    # 只在 push main / 手動觸發時部署;PR 只跑上面的 test job(合併前回饋,不部署)。
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: SSH deploy to the OCI VM
