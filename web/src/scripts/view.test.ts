@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterDeals, sortDeals, applyView, resolveTheme, nextSortDir, fmtLowDate, readChartPalette,
-  fmtCountdown, applyFilters, buildSparklinePath, NO_FILTERS,
+  fmtCountdown, applyFilters, buildSparklinePath, platformClass, NO_FILTERS,
   type Deal, type ViewState, type DealFilters,
 } from './view';
 
@@ -156,5 +156,19 @@ describe('buildSparklinePath', () => {
   });
   it('下降價格', () => {
     expect(buildSparklinePath([10, 0], 100, 20)).toBe('M0,0 L100,20');
+  });
+});
+
+describe('platformClass', () => {
+  it('已知商店回品牌 class(不分大小寫、子字串)', () => {
+    expect(platformClass('Steam')).toBe('steam');
+    expect(platformClass('Epic Games Store')).toBe('epic');
+    expect(platformClass('GOG')).toBe('gog');
+    expect(platformClass('DRM-Free, gog.com')).toBe('gog');
+  });
+  it('未知/泛用平台回空字串(預設灰 pill)', () => {
+    expect(platformClass('PC')).toBe('');
+    expect(platformClass('Itch.io')).toBe('');
+    expect(platformClass('')).toBe('');
   });
 });

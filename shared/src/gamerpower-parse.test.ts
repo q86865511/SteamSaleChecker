@@ -27,10 +27,12 @@ describe('gamerpower-parse', () => {
     expect(isSteamGiveaway('Epic Games Store, GOG')).toBe(false);
     expect(isSteamGiveaway('')).toBe(false);
   });
-  it('keepForeverGame:只收 Steam 的 Game/DLC 且 Active(排除 Beta 與非 Steam)', () => {
+  it('keepForeverGame:收 Game/DLC 且 Active(含非 Steam 平台;排除 Beta 與非 Active)', () => {
     expect(keepForeverGame({ ...perpetual, platforms: 'PC, Steam' })).toBe(true);
     expect(keepForeverGame({ ...dlc, platforms: 'Steam' })).toBe(true);
+    expect(keepForeverGame(perpetual)).toBe(true); // Epic-only 的 Game/Active 也收(多平台)
+    expect(keepForeverGame({ ...perpetual, platforms: 'GOG' })).toBe(true); // GOG 也收
     expect(keepForeverGame({ ...beta, platforms: 'Steam' })).toBe(false); // Beta 排除
-    expect(keepForeverGame(perpetual)).toBe(false); // Epic-only 非 Steam → 排除
+    expect(keepForeverGame({ ...perpetual, status: 'Expired' })).toBe(false); // 非 Active 排除
   });
 });

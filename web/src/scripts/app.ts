@@ -1,6 +1,6 @@
 import { twd, minutesAgo } from './format';
 import {
-  applyView, nextSortDir, fmtLowDate, fmtCountdown, NO_FILTERS, buildSparklinePath,
+  applyView, nextSortDir, fmtLowDate, fmtCountdown, NO_FILTERS, buildSparklinePath, platformClass,
   type Deal, type ViewState, type SortKey, type SortDir, type ViewMode, type Theme,
 } from './view';
 import { getMe, loadWishlist, addWish, removeWish, mergeLocalOnLogin, discordLoginUrl, logout, getLocal, type Me } from './wishlist';
@@ -100,7 +100,10 @@ function dealTable(rows: Deal[], t: Dict, wishSet: Set<number>): string {
 }
 
 function freeCard(f: FreeGiveaway, t: Dict): string {
-  const plats = f.platforms.slice(0, 3).map(p => `<span class="pill">${esc(p)}</span>`).join('');
+  const plats = f.platforms.slice(0, 3).map(p => {
+    const c = platformClass(p);
+    return `<span class="pill${c ? ` pill-${c}` : ''}">${esc(p)}</span>`;
+  }).join('');
   const end = f.endDate
     ? `<span class="muted small">~ ${esc(f.endDate.slice(0, 10))}</span>`
     : `<span class="muted small">${t.noEnd}</span>`;
