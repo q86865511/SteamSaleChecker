@@ -129,3 +129,12 @@ export function readChartPalette(get: (name: string) => string): ChartPalette {
     grid: get('--line') || '#2a3f5a',
   };
 }
+
+// 已知商店平台 → pill 品牌色 class('' = 預設灰 pill)。免費卡多平台徽章用。
+export function platformClass(platform: string): '' | 'steam' | 'epic' | 'gog' {
+  const k = platform.toLowerCase();
+  if (k.includes('steam')) return 'steam';
+  if (k.includes('epic')) return 'epic';
+  if (k.includes('gog')) return 'gog';
+  return '';
+}

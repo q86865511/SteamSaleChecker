@@ -4,7 +4,8 @@
 **已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。**roadmap A→D 全完成,R5/R6/R7 皆已合併並部署**(R6=PR #20、R7=PR #22)。**軌道 2a 工程硬化(PR #23)已 merge + 部署 + prod 親驗通過**(helmet 安全標頭 + rate-limit + trustProxy 依真實 IP 分桶)。**R7 邀請機器人/頻道路由已真機驗證**(主機/DB 證實 Ops 上線、邀請成功登記、測試通知落地);**R6 rich embed 真機驗證**時發現「降價 embed 用小縮圖、與免費/digest 大圖版面不一致」,已修(`thumbnail`→`image`,TDD)。**255 測試綠**、四 workspace tsc 乾淨。**下一階段四軌**:① 收尾 R7/R6(本批 `chore/r7-r6-closeout`)② 工程硬化(2a 已完成、2b 補測試待做)③ 多平台免費源 ④ 通知體驗(計畫檔 `~/.claude/plans/zesty-toasting-wilkes.md`)。
 
 ## 已完成
-- [2026-06-27] 🧪 軌道 2b 補測試(後端;分支 `test/api-coverage-2b`,待 PR):
+- [2026-06-27] 🎮 軌道 3 多平台免費源(分支 `feat/multi-platform-free`,待 PR):放寬 `shared/src/gamerpower-parse.ts` 的 `keepForeverGame`——去掉 `isSteamGiveaway` 強制,改收所有「Active 的 Game/DLC」(GamerPower 早已抓 `epic-games-store.gog`,只是被擋掉),`isSteamGiveaway` 保留供徽章。前端免費卡平台 pill 加品牌色(`view.ts` 純函式 `platformClass`:Steam 藍/Epic 金/GOG 紫,TDD)。**Preview 實測**:重烤後免費區由 Steam-only → 12 張含 Epic(Voidwrought/RollerCoaster Tycoon)、IndieGala/DRM-Free,Epic pill 金色 `#d6a23a`、Steam 藍、其餘灰;無 console 錯誤、web build 4 頁過。**294 測試綠**、web tsc 乾淨。README 免費段/資料來源表更新為多平台。
+- [2026-06-27] 🧪 軌道 2b 補測試(後端;PR #25 已 merge):
   - `api/src/db.test.ts`(+29):in-memory sqlite 測 users/wishlist/targets/user_bot_guilds CRUD、migration 冪等、`getNotifPrefs` 預設與 delivery 防禦(未知→channel)、純函式 `mergeGuildRouting`(null=清除 vs undefined=保留的關鍵區分)、`putNotifPrefs` 部分合併與 genres 取代/保留。
   - `api/src/auth.test.ts`(+8):mock `./discord` 網路呼叫,走真實 `/auth/discord`→state+cookie→`/auth/callback` 完整 OAuth/CSRF flow——happy path 建使用者+設 session+`/api/me` 取回、state 不符 400、缺 code/state 400、exchangeCode 失敗 502、addGuildMember 失敗非致命、user 被刪 401、logout 清 session。
   - **292 測試綠**(255→+37)、api tsc 乾淨。web 前端腳本(需 jsdom)留作 2b 後續。
@@ -113,7 +114,7 @@
 ## 待辦(下一階段四軌 roadmap,依序;計畫檔 `~/.claude/plans/zesty-toasting-wilkes.md`)
 - ✅ **軌道 1 收尾 R7/R6**:見「## 進行中」。
 - **軌道 2 工程品質硬化**:✅ 2a(CI 測試門檻 + API helmet/rate-limit,PR #23 已 merge);🧪 2b 後端覆蓋(`api/db.ts`+29、`api/auth.ts`+8,`test/api-coverage-2b` 待 PR);⏳ 2b 後續 `web/scripts/` 純邏輯(需 jsdom)、可選 prettier。
-- **軌道 3 多平台免費源(Epic/GOG)**:放寬 `shared/src/gamerpower-parse.ts` 的 `keepForeverGame`(去 `isSteamGiveaway` 強制)+ 前端平台徽章;GamerPower 已抓 Epic/GOG,**非**新接 API。⚠️ 行為變更:免費區會出現非 Steam 贈送。
+- ✅ **軌道 3 多平台免費源(Epic/GOG)**:放寬 `keepForeverGame` + 前端品牌色平台徽章(`feat/multi-platform-free`,待 PR;Preview 實測通過)。
 - **軌道 4 通知體驗**:4a 分類摘要(`buildDigestEmbed` 依類型分區);4b Email 備援(待拍板:`NotifDelivery` 加 `'email'`、OAuth `email` scope、Resend/SES)。註:個人化摘要依類型過濾已做好。
 
 ### 舊功能 roadmap(A→D,已全數完成)

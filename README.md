@@ -158,7 +158,7 @@ npm run test:watch  # watch 模式
 - 「即將結束」獨立成區;商品詳細頁有完整價格走勢圖(uPlot,主題感知)。
 
 ### 免費遊戲
-- 來自 GamerPower(僅收平台含 **Steam**、且「領了就永久擁有」者),附領取期限與 giveaway 價值。
+- 來自 GamerPower 的「領了就永久擁有」Game/DLC(排除 Beta、試玩),**多平台**:Steam / Epic Games Store / GOG / DRM-Free 等皆收;每張卡以**品牌色平台徽章**標示來源(Steam 藍 / Epic 金 / GOG 紫),附領取期限與 giveaway 價值。
 - 站內保留可點擊連結回 GamerPower.com(來源歸屬)。
 
 ### 願望單與通知
@@ -179,7 +179,7 @@ npm run test:watch  # watch 模式
 | 項目 | 說明 |
 | --- | --- |
 | Steam 商店端點 | `featuredcategories` / `appdetails` / 特價搜尋 / `appreviews`,**免金鑰**,台灣區 `cc=tw`(台幣) |
-| GamerPower API | 永久入庫免費遊戲 / DLC,**免金鑰** |
+| GamerPower API | 永久入庫免費遊戲 / DLC(多平台:Steam / Epic / GOG / DRM-Free…),**免金鑰** |
 | ITAD(IsThereAnyDeal) | 史低參考值校正,**選配**(需 `ITAD_API_KEY`) |
 | 特價榜上限 | `SSC_DEAL_LIMIT`,預設 **120**(熱銷排序) |
 | 價格歷史保留 | `SSC_HISTORY_KEEP_DAYS`,預設 **365** 天 |
