@@ -133,14 +133,15 @@ describe('buildDropEmbed', () => {
     discordId: '7', name: 'Hades II', appid: 1145350, lowCents: 49300, regularCents: 99000,
     review: { scoreDesc: '壓倒性好評', positivePct: 97, total: 5000 }, headerImage: 'https://cdn/h.jpg',
   };
-  it('drop:紅色、本站新低標示、會 @ 使用者、縮圖、商店按鈕', () => {
+  it('drop:紅色、本站新低標示、會 @ 使用者、大圖封面(與免費/digest 一致)、商店按鈕', () => {
     const p = buildDropEmbed({ ...base, reason: 'drop' });
     expect(p.content).toBe('<@7>');
     expect(p.embeds![0].color).toBe(COLORS.drop);
     expect(p.embeds![0].description).toContain('新低');
     expect(p.embeds![0].title).toContain('《Hades II》');
     expect(p.embeds![0].url).toContain('/app/1145350/');
-    expect(p.embeds![0].thumbnail!.url).toBe('https://cdn/h.jpg');
+    expect(p.embeds![0].image!.url).toBe('https://cdn/h.jpg');
+    expect(p.embeds![0].thumbnail).toBeUndefined();
     expect(p.components![0].components[0].url).toContain('/app/1145350/');
   });
   it('target:綠色', () => {
@@ -155,7 +156,7 @@ describe('buildDropEmbed', () => {
   it('缺選配補強(無原價/評價/封面)也能組', () => {
     const p = buildDropEmbed({ discordId: '7', name: 'G', appid: 2, lowCents: 100, reason: 'drop' });
     expect(p.embeds![0].description).toContain('NT$ 1');
-    expect(p.embeds![0].thumbnail).toBeUndefined();
+    expect(p.embeds![0].image).toBeUndefined();
   });
   it('mentionText 有給時覆蓋預設 @我:身分組', () => {
     expect(buildDropEmbed({ ...base, reason: 'drop', mentionText: '<@&r9>' }).content).toBe('<@&r9>');
