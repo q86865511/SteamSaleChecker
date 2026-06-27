@@ -71,3 +71,32 @@ describe('api smoke', () => {
     await app.close();
   });
 });
+
+describe('api hardening', () => {
+  it('回應帶 helmet 安全標頭(x-content-type-options: nosniff、x-frame-options)', async () => {
+    const db = new Database(':memory:'); ensureAuthTables(db);
+    const app = await buildApp(db);
+    const r = await app.inject({ method:'GET', url:'/health' });
+    expect(r.statusCode).toBe(200);
+    expect(r.headers['x-content-type-options']).toBe('nosniff');
+    expect(r.headers['x-frame-options']).toBeDefined();
+    await app.close();
+  });
+
+  it('超過速率上限回 429(SSC_RATE_LIMIT_MAX 可調)', async () => {
+    const prev = process.env.SSC_RATE_LIMIT_MAX;
+    process.env.SSC_RATE_LIMIT_MAX = '3';
+    try {
+      const db = new Database(':memory:'); ensureAuthTables(db);
+      const app = await buildApp(db);
+      const codes: number[] = [];
+      for (let i = 0; i < 5; i++) codes.push((await app.inject({ method:'GET', url:'/health' })).statusCode);
+      expect(codes.slice(0, 3)).toEqual([200, 200, 200]);
+      expect(codes[4]).toBe(429);
+      await app.close();
+    } finally {
+      if (prev === undefined) delete process.env.SSC_RATE_LIMIT_MAX;
+      else process.env.SSC_RATE_LIMIT_MAX = prev;
+    }
+  });
+});
