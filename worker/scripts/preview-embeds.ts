@@ -46,6 +46,7 @@ const main = async () => {
   const drop = buildDropEmbed({
     discordId: '0', name: dropApp?.nameZh ?? 'Hades II', appid: dropAppid, lowCents: 49300, reason: 'drop',
     regularCents: 99000, headerImage: dropApp?.headerImage ?? headerUrl(dropAppid), review: await fetchReviewSummary(dropAppid),
+    mentionText: '', // 預覽不顯示提及(避免假 discordId 變成壞掉的 <@0>);真實通知才依路由決定提及
   });
 
   // 4) digest

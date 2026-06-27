@@ -1,15 +1,20 @@
 # PROGRESS — SteamSaleChecker
 
 ## 目前狀態
-**已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。R6 Discord rich embed 已合併 main(PR #20)。**R7 進行中(`feat/discord-bot-server-routing`,待 PR):per-user 邀請機器人到自己伺服器 + 頻道路由**。**253 測試綠**、四個 workspace tsc 乾淨、web build 通過。**真實 bot 邀請/頻道路由待使用者完成 Ops 前置(Bot 設 Public、Discord 後台註冊新 redirect URI、主機 `.env` 加 `DISCORD_BOT_INVITE_REDIRECT_URI`)後親驗。**
+**已正式上線:https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。**roadmap A→D 全完成,R5/R6/R7 皆已合併並部署**(R6=PR #20、R7=PR #22)。**軌道 2a 工程硬化(PR #23)已 merge + 部署 + prod 親驗通過**(helmet 安全標頭 + rate-limit + trustProxy 依真實 IP 分桶)。**R7 邀請機器人/頻道路由已真機驗證**(主機/DB 證實 Ops 上線、邀請成功登記、測試通知落地);**R6 rich embed 真機驗證**時發現「降價 embed 用小縮圖、與免費/digest 大圖版面不一致」,已修(`thumbnail`→`image`,TDD)。**255 測試綠**、四 workspace tsc 乾淨。**下一階段四軌**:① 收尾 R7/R6(本批 `chore/r7-r6-closeout`)② 工程硬化(2a 已完成、2b 補測試待做)③ 多平台免費源 ④ 通知體驗(計畫檔 `~/.claude/plans/zesty-toasting-wilkes.md`)。
 
 ## 已完成
-- [2026-06-27] 🛡️ 軌道 2a 工程硬化(分支 `feat/ci-test-gate-api-hardening`,待 PR):
+- [2026-06-27] ✅ 軌道 1 收尾 R7/R6 + R6 embed 版面修正(分支 `chore/r7-r6-closeout`,待 PR):
+  - **R7 真機驗證**:`ssh oracle` 確認主機 `.env` 與運行容器都有 `DISCORD_BOT_INVITE_REDIRECT_URI`(Ops 上線);DB `user_bot_guilds` 證實使用者昨天成功把 bot 邀進自管伺服器(擁有權驗證有通過);`/settings` 選頻道 + 測試通知落地。
+  - **R6 真機驗證**:以 `preview-embeds.ts` 發 4 型 embed 到頻道肉眼比對。發現**降價/目標價 embed 用 `thumbnail`(小縮圖),與免費/digest 的 `image`(大圖)版面不一致**。
+  - **修正**(TDD):`buildDropEmbed` 改用 `embed.image` 大圖封面、與其他通知一致;`embeds.test.ts` 斷言改 `image`;preview 腳本 drop 傳 `mentionText:''` 不再顯示假的 `<@0>`。**255 測試綠**、worker tsc 乾淨。
+  - 文件同步:本檔 + 記憶 + README 環境變數/CI 段(隨 2a)。
+- [2026-06-27] 🛡️ 軌道 2a 工程硬化(PR #23 已 merge=commit `fa90e58`、部署 live、prod 親驗通過):
   - **CI 測試門檻**:`.github/workflows/deploy.yml` 新增 GitHub-runner `test` job(`npm ci` + `npm test`,Node 22),`deploy` 加 `needs: test`,**測試不過即擋部署**(原本 CI 從不跑測試)。
   - **API 安全硬化**(`api/src/server.ts`):註冊 `@fastify/helmet`(安全標頭;API 無 HTML 故關 CSP、CORP 設 cross-origin)+ `@fastify/rate-limit`(每 IP 預設 100/分、`SSC_RATE_LIMIT_MAX` 可調、超量 429);`Fastify({ trustProxy: true })` 讓 Caddy/Cloudflare 後面能依真實 client IP 分桶。
   - TDD:`api/src/server.test.ts` +2 整合測試(nosniff/x-frame-options 標頭、超量 429);**255 測試綠**、api tsc 乾淨。
-- [2026-06-26] 🤖 R7 per-user 邀請機器人 + 伺服器/頻道路由(`feat/discord-bot-server-routing`,待 PR):設定頁新增「Discord 伺服器通知」區——使用者可把官方機器人邀請進**自己的伺服器**、選伺服器與頻道(預設統一、可切「分流」讓降價/免費/摘要各送不同頻道)、設提及方式(不提及 / @我 / @身分組)、看連線狀態、發測試通知、移除連線。後端新增 `delivery='guild'` 與 `notif_prefs` 路由欄 + `user_bot_guilds` 表;`/api/bot/*` 路由(invite/callback/guilds/channels/roles/test/disconnect)。**安全要點(對抗式 review 抓到並修)**:邀請 callback 的 `guild_id` 可偽造,故用 `scope=bot guilds`+換 code+`/users/@me/guilds` 驗使用者真有該 guild 管理權才登記;寫入路由前用 bot token 即時驗證頻道/身分組歸屬;allowed_mentions 最小白名單。worker 路由解析抽成純函式 `worker/src/route.ts`;`postChannelMessage` 支援精準 mention 白名單;embeds 加 `mentionText`;順手修 `getNotifPrefs(ForUser)` 把 `'guild'` 直通(原 ternary 會吃成 channel)。**+43 測試(253 綠)**;Preview 實測設定頁(深/淺、統一/分流、@身分組)版面正確並修一個 `.set-row[hidden]` CSS bug。
-- [2026-06-26] 🎨 R6 Discord 通知改 Steam 商店風 rich embed(`feat/discord-embeds`,待 PR):4 型通知(免費公告/個人免費/降價·目標價/特價 digest)純文字→embed(`inline-code` chip/Discord `<t:>` 領取倒數/封面圖/link button/footer);傳輸層 `postChannelMessage`·`sendDm` 改吃 `string|MessagePayload`,排版抽到純函式 `worker/src/embeds.ts`(TDD)。免費完整版用 `searchSteamAppid`(storesearch 以標題解析、正規化相等才套用、快取 `free_giveaways.appid`)補評價·原價封面,贈送一律框「免費領取」(不沿用 Steam 現價),對不到/非 Steam 退精簡版;降價·digest 重用既有 `games`/`game_reviews`/`Deal` 補強不增 Steam 請求。**對抗式多代理 review 修 8 項**(appid 查詢失敗不毒化快取、embed 256/4096 截斷、chip 反引號淨化、parseEndDate 範圍驗證、enrich 封面 isHttp 守、本輪 appdetails 共用快取、平台解析改用 `parsePlatforms`)。**210 測試綠**、worker tsc 乾淨;新 `scripts/preview-embeds.ts` 以真實 Steam 資料肉眼比對。
+- [2026-06-26] 🤖 R7 per-user 邀請機器人 + 伺服器/頻道路由(PR #22 已 merge=`dcea347`;真機驗證通過 2026-06-27):設定頁新增「Discord 伺服器通知」區——使用者可把官方機器人邀請進**自己的伺服器**、選伺服器與頻道(預設統一、可切「分流」讓降價/免費/摘要各送不同頻道)、設提及方式(不提及 / @我 / @身分組)、看連線狀態、發測試通知、移除連線。後端新增 `delivery='guild'` 與 `notif_prefs` 路由欄 + `user_bot_guilds` 表;`/api/bot/*` 路由(invite/callback/guilds/channels/roles/test/disconnect)。**安全要點(對抗式 review 抓到並修)**:邀請 callback 的 `guild_id` 可偽造,故用 `scope=bot guilds`+換 code+`/users/@me/guilds` 驗使用者真有該 guild 管理權才登記;寫入路由前用 bot token 即時驗證頻道/身分組歸屬;allowed_mentions 最小白名單。worker 路由解析抽成純函式 `worker/src/route.ts`;`postChannelMessage` 支援精準 mention 白名單;embeds 加 `mentionText`;順手修 `getNotifPrefs(ForUser)` 把 `'guild'` 直通(原 ternary 會吃成 channel)。**+43 測試(253 綠)**;Preview 實測設定頁(深/淺、統一/分流、@身分組)版面正確並修一個 `.set-row[hidden]` CSS bug。
+- [2026-06-26] 🎨 R6 Discord 通知改 Steam 商店風 rich embed(PR #20 已 merge;真機驗證 2026-06-27,降價 embed 版面修正見上):4 型通知(免費公告/個人免費/降價·目標價/特價 digest)純文字→embed(`inline-code` chip/Discord `<t:>` 領取倒數/封面圖/link button/footer);傳輸層 `postChannelMessage`·`sendDm` 改吃 `string|MessagePayload`,排版抽到純函式 `worker/src/embeds.ts`(TDD)。免費完整版用 `searchSteamAppid`(storesearch 以標題解析、正規化相等才套用、快取 `free_giveaways.appid`)補評價·原價封面,贈送一律框「免費領取」(不沿用 Steam 現價),對不到/非 Steam 退精簡版;降價·digest 重用既有 `games`/`game_reviews`/`Deal` 補強不增 Steam 請求。**對抗式多代理 review 修 8 項**(appid 查詢失敗不毒化快取、embed 256/4096 截斷、chip 反引號淨化、parseEndDate 範圍驗證、enrich 封面 isHttp 守、本輪 appdetails 共用快取、平台解析改用 `parsePlatforms`)。**210 測試綠**、worker tsc 乾淨;新 `scripts/preview-embeds.ts` 以真實 Steam 資料肉眼比對。
 - [2026-06-26] 📄 文件:README 改寫為作品集風格(對齊 Soulshard 風,加徽章/TOC/Mermaid/技術亮點/已知限制/文件索引)+ 新增 `docs/architecture.svg` 架構圖 + MIT `LICENSE`
 - [2026-06-26] 🧪 R5.7 對抗式review修2bug+5小修
 - [2026-06-26] 🌐 R5.6 Steam願望單匯入
@@ -99,9 +104,15 @@
   - 本機驗證:渲染 40 特價 + 7 即將結束 + 11 免費,熱銷排序、台幣價、「本站最低」徽章正確,無 console 錯誤。
 
 ## 進行中
-- (無)
+- **軌道 1 收尾 R7/R6**(分支 `chore/r7-r6-closeout`,待 push/PR/merge)— R7/R6 已真機驗證、R6 降價 embed 版面已修;待合併部署後重發 preview 給使用者確認大圖版面。
 
-## 待辦(功能擴充 roadmap,依序;見 `~/.claude/plans/1-icon-*.md`)
+## 待辦(下一階段四軌 roadmap,依序;計畫檔 `~/.claude/plans/zesty-toasting-wilkes.md`)
+- ✅ **軌道 1 收尾 R7/R6**:見「## 進行中」。
+- **軌道 2 工程品質硬化**:✅ 2a(CI 測試門檻 + API helmet/rate-limit,PR #23 已 merge);⏳ 2b 補測試(`api/db.ts`、`api/auth.ts`、`web/scripts/` 純邏輯;可選 prettier)。
+- **軌道 3 多平台免費源(Epic/GOG)**:放寬 `shared/src/gamerpower-parse.ts` 的 `keepForeverGame`(去 `isSteamGiveaway` 強制)+ 前端平台徽章;GamerPower 已抓 Epic/GOG,**非**新接 API。⚠️ 行為變更:免費區會出現非 Steam 贈送。
+- **軌道 4 通知體驗**:4a 分類摘要(`buildDigestEmbed` 依類型分區);4b Email 備援(待拍板:`NotifDelivery` 加 `'email'`、OAuth `email` scope、Resend/SES)。註:個人化摘要依類型過濾已做好。
+
+### 舊功能 roadmap(A→D,已全數完成)
 - ~~Phase A 前端體驗包~~:✅ PR #9 已 merge。
 - ~~Phase C 通知包~~:✅ PR #10 已 merge(目標價通知移至 Phase B)。
 - **Phase B 資料加值 + 詳細頁(進行中,拆小 PR)**:

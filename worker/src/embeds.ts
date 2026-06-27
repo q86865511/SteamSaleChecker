@@ -152,7 +152,8 @@ export function buildDropEmbed(p: DropInput): MessagePayload {
     description: clamp(lines.join('\n'), MAX_DESC),
     footer: { text: '資料來源:Steam Store' },
   };
-  if (isHttp(p.headerImage)) embed.thumbnail = { url: p.headerImage };
+  // 大圖封面(embed.image,全寬)以與免費/digest 通知版面一致(原本用 thumbnail 小縮圖)。
+  if (isHttp(p.headerImage)) embed.image = { url: p.headerImage };
 
   return { content: resolveContent(p.mentionText, p.discordId), embeds: [embed], components: linkButton('前往商店', storeUrl) };
 }
