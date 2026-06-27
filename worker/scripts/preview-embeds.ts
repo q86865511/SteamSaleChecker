@@ -50,13 +50,15 @@ const main = async () => {
   });
 
   // 4) digest
-  const deal = (a: number, nameZh: string, dp: number, price: number): Deal => ({
+  const deal = (a: number, nameZh: string, dp: number, price: number, genres?: string[]): Deal => ({
     appid: a, nameZh, headerImage: headerUrl(a), priceCents: price, regularCents: price * 3, discountPercent: dp,
-    rank: a, observedLowCents: null, observedLowAt: null, isAtObservedLow: false, observedMaxDiscount: dp,
+    rank: a, observedLowCents: null, observedLowAt: null, isAtObservedLow: false, observedMaxDiscount: dp, genres,
   });
-  const digest = buildDigestEmbed(
-    [deal(1091500, 'Cyberpunk 2077', 80, 24600), deal(1145350, 'Hades II', 50, 49300), deal(1245620, 'Elden Ring', 40, 116400)], 5,
-  );
+  const digest = buildDigestEmbed([
+    deal(1091500, 'Cyberpunk 2077', 80, 24600, ['角色扮演']),
+    deal(1145350, 'Hades II', 50, 49300, ['動作']),
+    deal(1245620, 'Elden Ring', 40, 116400, ['動作', '角色扮演']),
+  ], 5);
 
   const payloads: Array<[string, MessagePayload | null]> = [
     ['免費(完整)', full], ['免費(精簡)', simple], ['降價', drop], ['digest', digest],
