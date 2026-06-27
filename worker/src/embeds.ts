@@ -160,20 +160,34 @@ export function buildDropEmbed(p: DropInput): MessagePayload {
 
 export interface DigestOpts { mention?: string; mentionText?: string; siteUrl?: string; steamIcon?: string; }
 
-// 特價精選 digest embed;依折扣高→低取 topN;空回 null。
+const DIGEST_OTHER_GENRE = '其他';
+const MAX_FIELD_VALUE = 1024; // Discord embed field value 上限
+
+// 特價精選 digest embed;依折扣高→低取 topN,再**依主要類型(第一個 genre)分區**成 embed fields;空回 null。
+// 類型區依其最高折扣排序(最熱類型在前);無類型者歸「其他」;組內亦折扣高→低(沿用 top 的排序)。
 export function buildDigestEmbed(deals: Deal[], topN: number, opts: DigestOpts = {}): MessagePayload | null {
   const top = [...deals].sort((a, b) => b.discountPercent - a.discountPercent).slice(0, topN);
   if (top.length === 0) return null;
   const site = opts.siteUrl ?? SITE_URL;
-  const lines = top.map((d, i) => {
-    const name = `[${d.nameZh}](https://store.steampowered.com/app/${d.appid}/)`;
-    return `**${i + 1}.** ${name} ${chip(`-${d.discountPercent}%`)} ${chip(formatTwd(d.priceCents))}`;
-  });
+
+  const groups = new Map<string, Deal[]>();
+  for (const d of top) {
+    const g = d.genres?.[0] ?? DIGEST_OTHER_GENRE;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g)!.push(d);
+  }
+  const dealLine = (d: Deal): string =>
+    `[${d.nameZh}](https://store.steampowered.com/app/${d.appid}/) ${chip(`-${d.discountPercent}%`)} ${chip(formatTwd(d.priceCents))}`;
+  const fields: DiscordEmbedField[] = [...groups.entries()]
+    // 各組首元素折扣最高(top 已降序);類型依其最高折扣排序。
+    .sort((a, b) => b[1][0].discountPercent - a[1][0].discountPercent)
+    .map(([genre, ds]) => ({ name: clamp(genre, MAX_TITLE), value: clamp(ds.map(dealLine).join('\n'), MAX_FIELD_VALUE) }));
+
   const embed: DiscordEmbed = {
     color: COLORS.digest,
     author: { name: 'STEAM 特價精選', icon_url: opts.steamIcon },
     title: `Top ${top.length} 特價`,
-    description: clamp(lines.join('\n'), MAX_DESC),
+    fields,
     footer: { text: '資料來源:Steam Store', icon_url: opts.steamIcon },
   };
   if (isHttp(top[0].headerImage)) embed.image = { url: top[0].headerImage };

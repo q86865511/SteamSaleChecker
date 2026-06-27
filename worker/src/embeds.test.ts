@@ -170,21 +170,39 @@ describe('buildDropEmbed', () => {
 });
 
 describe('buildDigestEmbed', () => {
-  const mk = (appid: number, nameZh: string, discountPercent: number, priceCents: number, headerImage: string): Deal => ({
+  const mk = (appid: number, nameZh: string, discountPercent: number, priceCents: number, headerImage: string, genres?: string[]): Deal => ({
     appid, nameZh, headerImage, priceCents, regularCents: priceCents * 2, discountPercent, rank: appid,
-    observedLowCents: null, observedLowAt: null, isAtObservedLow: false, observedMaxDiscount: discountPercent,
+    observedLowCents: null, observedLowAt: null, isAtObservedLow: false, observedMaxDiscount: discountPercent, genres,
   });
-  const deals = [mk(1, 'AAA', 40, 30000, 'https://cdn/a.jpg'), mk(2, 'BBB', 90, 10000, 'https://cdn/b.jpg')];
+  const deals = [mk(1, 'AAA', 40, 30000, 'https://cdn/a.jpg', ['動作']), mk(2, 'BBB', 90, 10000, 'https://cdn/b.jpg', ['策略'])];
 
   it('空陣列回 null', () => expect(buildDigestEmbed([], 5)).toBeNull());
-  it('依折扣高→低排序', () => {
-    const d = buildDigestEmbed(deals, 5)!.embeds![0].description!;
-    expect(d.indexOf('BBB')).toBeLessThan(d.indexOf('AAA'));
+  it('依類型分區成 embed fields(不再用單一 description)', () => {
+    const e = buildDigestEmbed(deals, 5)!.embeds![0];
+    expect(e.description).toBeUndefined();
+    expect(e.fields!.map(f => f.name)).toEqual(expect.arrayContaining(['動作', '策略']));
   });
-  it('限制 topN 筆', () => {
-    const many = Array.from({ length: 8 }, (_, i) => mk(i, 'G' + i, 10 + i, 1000, 'https://cdn/x.jpg'));
-    const d = buildDigestEmbed(many, 3)!.embeds![0].description!;
-    expect(d.match(/G\d/g)!.length).toBe(3);
+  it('類型依其最高折扣排序(最熱在前);組內含該類型遊戲', () => {
+    const e = buildDigestEmbed(deals, 5)!.embeds![0];
+    expect(e.fields![0].name).toBe('策略'); // 90% 那組排前
+    expect(e.fields![0].value).toContain('BBB');
+    expect(e.fields!.find(f => f.name === '動作')!.value).toContain('AAA');
+  });
+  it('無類型者歸「其他」', () => {
+    const e = buildDigestEmbed([mk(3, 'CCC', 50, 5000, 'https://cdn/c.jpg')], 5)!.embeds![0];
+    expect(e.fields!.map(f => f.name)).toEqual(['其他']);
+    expect(e.fields![0].value).toContain('CCC');
+  });
+  it('同類型多款組內依折扣高→低', () => {
+    const e = buildDigestEmbed([mk(1, 'LO', 30, 1000, 'i', ['動作']), mk(2, 'HI', 80, 1000, 'i', ['動作'])], 5)!.embeds![0];
+    const v = e.fields![0].value;
+    expect(v.indexOf('HI')).toBeLessThan(v.indexOf('LO'));
+  });
+  it('限制 topN 筆(跨所有分區合計)', () => {
+    const many = Array.from({ length: 8 }, (_, i) => mk(i, 'G' + i, 10 + i, 1000, 'i', ['動作']));
+    const e = buildDigestEmbed(many, 3)!.embeds![0];
+    const total = e.fields!.reduce((n, f) => n + (f.value.match(/G\d/g)?.length ?? 0), 0);
+    expect(total).toBe(3);
   });
   it('金色、榜首封面、看更多按鈕連到站點', () => {
     const p = buildDigestEmbed(deals, 5)!;
