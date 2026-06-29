@@ -1,0 +1,41 @@
+name: CI
+
+# 合併前的驗證關卡(typecheck → 單元測試 → web build → e2e smoke)。
+# 只驗證、不部署;部署是 deploy.yml 的事(關注點分離)。
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Typecheck（shared / api / worker / web）
+        run: npm run typecheck
+
+      - name: Unit tests（Vitest）
+        run: npm test
+
+      - name: Build web（Astro 靜態匯出）
+        run: npm -w @ssc/web run build
+
+      # e2e smoke：對上一步 build 的 dist 起 `astro preview`,驗證首頁載入與行動版不破版。
+      - name: E2E smoke（Playwright）
+        run: |
+          npm -w @ssc/web exec playwright install --with-deps chromium
+          npm -w @ssc/web run test:e2e

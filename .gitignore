@@ -7,3 +7,10 @@ web/src/env.d.ts
 .env
 *.log
 .claude/
+
+# Playwright e2e 產物
+test-results/
+playwright-report/
+web/test-results/
+web/playwright-report/
+web/playwright/.cache/

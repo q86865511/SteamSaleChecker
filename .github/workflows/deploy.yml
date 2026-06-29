@@ -1,9 +1,10 @@
 name: Deploy to Oracle
 
+# 只負責「部署」。合併前的驗證(typecheck / 測試 / build / e2e)由 ci.yml 處理。
+# 觸發:push 到 main(PR 合併後)或手動;PR 不在此跑(關注點分離)。
+
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch: {}
 
@@ -12,21 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-
   deploy:
-    needs: test
-    # 只在 push main / 手動觸發時部署;PR 只跑上面的 test job(合併前回饋,不部署)。
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: SSH deploy to the OCI VM
