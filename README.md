@@ -7,12 +7,12 @@
 [![Deploy](https://github.com/q86865511/SteamSaleChecker/actions/workflows/deploy.yml/badge.svg)](https://github.com/q86865511/SteamSaleChecker/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Live-steam.terrychou.com-1f6feb?logo=steam&logoColor=white)](https://steam.terrychou.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178c6?logo=typescript&logoColor=white)](tsconfig.base.json)
-[![Astro](https://img.shields.io/badge/Astro-4.x-ff5d01?logo=astro&logoColor=white)](web/package.json)
-[![Fastify](https://img.shields.io/badge/Fastify-4.x-000000?logo=fastify&logoColor=white)](api/package.json)
+[![Astro](https://img.shields.io/badge/Astro-7.x-ff5d01?logo=astro&logoColor=white)](web/package.json)
+[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?logo=fastify&logoColor=white)](api/package.json)
 [![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003b57?logo=sqlite&logoColor=white)](worker/package.json)
 [![discord.js](https://img.shields.io/badge/discord.js-14.x-5865f2?logo=discord&logoColor=white)](api/package.json)
 [![Docker](https://img.shields.io/badge/Docker-compose-2496ed?logo=docker&logoColor=white)](docker-compose.yml)
-[![tests](https://img.shields.io/badge/tests-164%20passing-2ea44f)](#-測試)
+[![tests](https://img.shields.io/badge/tests-297%20passing-2ea44f)](#-測試)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 <p align="center"><img src="docs/architecture.svg" alt="SteamSaleChecker 架構:Worker 抓取 Steam/GamerPower/ITAD → SQLite → 烘焙靜態 JSON → Astro 前端;選配 Fastify API + Discord Bot" width="840"></p>
@@ -23,7 +23,7 @@
 - ⚡ **靜態 JSON 架構**:worker 烤 JSON、前端 client 端 fetch,**資料更新免重新 build**;公開瀏覽永遠只讀靜態檔
 - 🔔 **選配 Discord 帳號與通知**:離線優先,未登入也能用;登入後願望單跨裝置同步 + 降價/免費/摘要通知
 
-**目前進度**:R5 批次已合併 `main` 並自動部署 live,**164 測試全綠**,正式站 **https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。逐次進度與決策見 [`PROGRESS.md`](PROGRESS.md)。
+**目前進度**:R5 批次已合併 `main` 並自動部署 live,**297 測試全綠**,正式站 **https://steam.terrychou.com**(Oracle Docker + Caddy + Cloudflare Tunnel)。逐次進度與決策見 [`PROGRESS.md`](PROGRESS.md)。
 
 ## 目錄
 
@@ -49,7 +49,7 @@
 
 一個自架的 **Steam 特價追蹤站**。後端每 ~30 分鐘抓取 Steam 官方商店端點與 GamerPower,自己累積每款遊戲的台幣價格歷史(因此能誠實計算「本站開始監測以來的最低價」),再把結果烘焙成一批靜態 JSON。前端是 **Astro** 暗色電競風,以 SteamDB 風格的可排序熱門特價榜、即將結束、免費領取與單款詳情頁(價格走勢圖)呈現。掛在個人網站子站,同時作為作品集。
 
-技術上刻意走「**資料與前端解耦**」:worker 烤 JSON、前端 client 端 `fetch`,資料更新免重新 build;所有第三方 API 呼叫都在 server 端,公開瀏覽永遠只讀靜態檔,既快又穩。專案以 npm workspaces 切成 `shared` / `worker` / `web` / `api` 四個套件,核心邏輯以 TDD 撰寫(**164 測試**)。
+技術上刻意走「**資料與前端解耦**」:worker 烤 JSON、前端 client 端 `fetch`,資料更新免重新 build;所有第三方 API 呼叫都在 server 端,公開瀏覽永遠只讀靜態檔,既快又穩。專案以 npm workspaces 切成 `shared` / `worker` / `web` / `api` 四個套件,核心邏輯以 TDD 撰寫(**297 測試**)。
 
 帳號與通知是**選配且離線優先**:未登入時願望單存在瀏覽器 `localStorage`,完全不影響瀏覽。接上 Fastify API 後可用 Discord 登入、跨裝置同步願望單、為每款設**目標價**,並由 Discord Bot 派送降價、免費遊戲與每日/每週特價摘要通知(可選頻道 @你 或私訊 DM)。
 
@@ -57,7 +57,7 @@
 
 - **自建價格歷史**:Steam 官方無歷史價,worker 每輪把台幣價寫進 SQLite 累積走勢並維護「觀測以來最低」;誠實標「追蹤以來最低」,可選配 ITAD 校正史低參考值而**不污染**走勢曲線。
 - **靜態 JSON 架構**:worker 原子寫出 `deals`/`free`/`meta`/`detail`/`history` 等 JSON,前端 client 端 `fetch`,**資料更新免重新 build**;抓取失敗續供舊檔。
-- **monorepo + 純函式 TDD**:`shared`(幣別/折扣、創新低判斷、Steam/GamerPower/ITAD 解析、sparkline…)皆為可測純函式;`worker` / `web` / `api` 共用型別,**164 測試**(vitest)。
+- **monorepo + 純函式 TDD**:`shared`(幣別/折扣、創新低判斷、Steam/GamerPower/ITAD 解析、sparkline…)皆為可測純函式;`worker` / `web` / `api` 共用型別,**297 測試**(vitest)。
 - **SteamDB 風前端,零框架**:Astro 靜態輸出 + 少量 TS;可排序緊湊列表⇄卡片、單款搜尋、即時倒數、列內價格 sparkline、Steam 評價,深/淺主題(uPlot 圖表隨主題重繪)。
 - **選配 Discord 子系統**:Fastify + secure-session 做 OAuth 登入,願望單跨裝置同步(`localStorage` → DB 合併);**per-user 通知偏好**(降價/免費/摘要/類型/頻道·DM)存 DB,worker 依偏好決定對誰、用什麼方式發。
 - **冪等通知,不洗頻**:只對「跌破先前已記錄最低」的 meaningful new low 通知,首次觀測不發;已通知標記去重、失敗下輪重試。
@@ -122,14 +122,17 @@ npm -w @ssc/api run dev                # http://localhost:8787
 
 ## 🧪 測試
 
-以 vitest 跑 `shared / worker / api` 的單元測試(核心邏輯皆純函式 TDD):
+測試分兩層:**單元測試(vitest)** 涵蓋 `shared / worker / web / api` 的純函式邏輯;**e2e smoke(Playwright)** 對 build 後的前端靜態站做最基本的可用性驗證(首頁載入、行動版不破版)。
 
 ```bash
-npm test            # vitest run —— 目前 164 測試
-npm run test:watch  # watch 模式
+npm test                       # vitest run —— 目前 297 測試
+npm run typecheck              # shared / api / worker / web 全部 tsc --noEmit
+npm -w @ssc/web run build      # Astro 靜態匯出
+npm -w @ssc/web run test:e2e   # Playwright e2e(對 dist 起 astro preview)
+npm run test:watch             # vitest watch 模式
 ```
 
-> 前端為 Astro + 少量 TS,主要以**重載 + 瀏覽器實測**驗證(Preview 工具 snapshot / inspect / eval);無 headless 前端自動化測試,CI 也只負責部署(見[已知限制](#-已知限制))。
+> **CI 與部署分離**(關注點分離):[`ci.yml`](.github/workflows/ci.yml) 在 PR / push 跑 `typecheck → 單元測試 → web build → e2e smoke`,當作合併前的驗證關卡;[`deploy.yml`](.github/workflows/deploy.yml) 只負責 push `main` 後部署到 Oracle。
 
 ## 功能導覽
 
@@ -184,7 +187,7 @@ npm run test:watch  # watch 模式
 | 特價榜上限 | `SSC_DEAL_LIMIT`,預設 **120**(熱銷排序) |
 | 價格歷史保留 | `SSC_HISTORY_KEEP_DAYS`,預設 **365** 天 |
 | 抓取間隔 | `SSC_INTERVAL`,預設 **1800s**(~30 分) |
-| 測試 | **164** 通過(vitest) |
+| 測試 | **297** 通過(vitest) |
 | 套件 | 4 個 workspace:`shared` / `worker` / `web` / `api` |
 
 > 「歷史最低」為**本站自建追蹤**(非 SteamDB / ITAD runtime),誠實標示「追蹤以來最低」;ITAD 僅用於校正史低參考值。本站與 Valve 無任何關係。
@@ -257,7 +260,7 @@ docker compose up -d --build           # api(:8788)+ worker loop(SQLite volume)
 ```
 
 - [`docker-compose.yml`](docker-compose.yml):`api` 容器(`127.0.0.1:8788`,`COOKIE_SECURE=true`)+ `worker` 容器(`while true; run; sleep ${SSC_INTERVAL:-1800}`),共用 `sscdata` volume;worker 把 JSON 烤到 bind mount `/srv/steam/data`。
-- CI/CD:[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)—— push `main` 先跑 `test` job(GitHub runner:`npm ci` → `npm test`),**測試綠才部署**;`deploy` job(`appleboy/ssh-action`)SSH 到 VM → `git reset --hard` → `npm ci` → build web → `rsync` 靜態檔到 `/srv/steam`(`--exclude data`)→ `docker compose up -d --build` → `curl /health` 健康檢查(最多 15 次)。
+- CI/CD(關注點分離):[`ci.yml`](.github/workflows/ci.yml) 在 PR / push 跑 `typecheck → 單元測試 → web build → e2e smoke`(合併前關卡);[`deploy.yml`](.github/workflows/deploy.yml) 只負責部署 —— push `main`(或手動)時 `deploy` job(`appleboy/ssh-action`)SSH 到 VM → `git reset --hard` → `npm ci` → build web → `rsync` 靜態檔到 `/srv/steam`(`--exclude data`)→ `docker compose up -d --build` → `curl /health` 健康檢查(最多 15 次)。
 - secrets:`OCI_HOST` / `OCI_USER` / `OCI_SSH_KEY`;祕密(Discord / ITAD)放主機 `api/.env`(gitignore,`git reset` 不覆蓋)。
 
 ## 專案結構
@@ -287,12 +290,12 @@ SteamSaleChecker/
 - **核心邏輯走純函式 + TDD**:幣別/折扣、創新低判斷、解析器、sparkline 等都在 [`shared/`](shared/),先寫測試再實作。
 - **新增資料源**:在 `worker/src/sources/` 加一支抓取 + 對應 `*-parse.ts` 純函式(TDD),於 `pipeline.ts` 接線、寫進 SQLite,再於 `bake.ts` 烤進 JSON;前端加對應 fetch / 渲染即可。
 - **型別單一來源**:共用型別(`Deal`、`FreeGiveaway` 等)定義在 `shared/src/types.ts`,worker / web / api 一致引用。
-- **跑驗證**:`npm test`(164);前端改動以 `npm -w @ssc/web run dev` 重載 + Preview 實測。
+- **跑驗證**:`npm test`(297);前端改動以 `npm -w @ssc/web run dev` 重載 + Preview 實測。
 
 ## 🚧 已知限制
 
 - **靜態站 → 無 per-game OG**:詳細頁走「靜態 + query param client fetch」,與 per-game OG 分享不相容,故沿用站台通用 OG(client 端僅改 `document.title`)。
-- **CI 測試門檻僅含單元測試,前端仍手測**:`deploy.yml` 的 `test` job 會在部署前跑 `npm test`(`shared`/`worker`/`api` 單元),失敗即擋部署;但前端(Astro 頁面/DOM 邏輯)仍以瀏覽器實測,無 headless 自動化。README 徽章中的 tests 數為**靜態**標示。
+- **e2e 為最小 smoke,深層前端互動仍手測**:CI 的 Playwright e2e 只驗「首頁載入 / 行動版不破版」這類基本可用性;深層 DOM 互動(排序、篩選、圖表、登入流程)仍以瀏覽器實測。README 徽章中的 tests 數為**靜態**標示。
 - **通知需自備 Discord 資產**:降價/免費/摘要通知需使用者自己的 bot token / guild / channel;未設定則自動略過(公開站不受影響)。
 - **史低為「追蹤以來」**:Steam 官方無歷史價,冷啟動時史低 = 首次觀測;ITAD 校正為選配(需 API Key),且只校正參考值、不補走勢歷史點。
 - **Steam 端點節流**:未公開端點有 per-IP 限制(~200 req/5min);`appdetails` / `appreviews` 已節流 ~1 req/s + 退避。
